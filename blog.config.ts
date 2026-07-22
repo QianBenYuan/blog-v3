@@ -1,12 +1,12 @@
 import type { FeedEntry } from './app/types/feed'
 
 const basicConfig = {
-	title: '博客',
-	subtitle: '博客',
+	title: '千本圆',
+	subtitle: '千本圆',
 	// 长 description 利好于 SEO
-	description: '博客',
+	description: '千本圆',
 	author: {
-		name: '博客',
+		name: '千本圆',
 		avatar: '/assets/avatar.jpg',
 		email: 'hi@example.cyou',
 		homepage: 'https://www.example.site/',
