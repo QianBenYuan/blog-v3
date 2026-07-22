@@ -7,7 +7,7 @@ const basicConfig = {
 	description: '博客',
 	author: {
 		name: '博客',
-		avatar: 'https://www.example.site/api/avatar.png',
+		avatar: '/assets/avatar.jpg',
 		email: 'hi@example.cyou',
 		homepage: 'https://www.example.site/',
 	},
