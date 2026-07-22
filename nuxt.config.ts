@@ -15,11 +15,13 @@ function pluginPath(path: string) {
 
 // 此处配置无需修改
 export default defineNuxtConfig({
+	devtools: { enabled: false },
 	app: {
 		head: {
 			meta: [
 				{ name: 'author', content: [blogConfig.author.name, blogConfig.author.email].filter(Boolean).join(', ') },
 				{ name: 'color-scheme', content: 'light dark' },
+				{ name: 'referrer', content: 'no-referrer' },
 				// 此处为元数据的生成器标识，不建议修改
 				{ 'name': 'generator', 'content': `${pascalCase(packageJson.name)} ${packageJson.version}`, 'data-github-repo': packageJson.homepage },
 				{ name: 'mobile-web-app-capable', content: 'yes' },
@@ -76,6 +78,9 @@ export default defineNuxtConfig({
 			// https://github.com/nuxt/content/issues/2378
 			autoSubfolderIndex: CLOUDFLARE_PAGES || GITHUB_ACTIONS || NETLIFY ? false : undefined,
 		},
+		features: {
+			inlineStyles: false,
+		},
 	},
 
 	// @keep-sorted
@@ -85,6 +90,7 @@ export default defineNuxtConfig({
 		'/atom.xml': { prerender: true, headers: { 'Content-Type': 'application/xml' } },
 		'/favicon.ico': { redirect: { to: blogConfig.favicon } },
 		'/subscriptions.opml': { prerender: true, headers: { 'Content-Type': 'application/xml' } },
+		'/**': { headers: { 'Referrer-Policy': 'no-referrer' } },
 	},
 
 	runtimeConfig: {
@@ -140,7 +146,7 @@ export default defineNuxtConfig({
 		'@bikariya/image-viewer',
 		'@bikariya/modals',
 		'@bikariya/shiki',
-		'@nuxt/a11y',
+		// '@nuxt/a11y',
 		'@nuxt/content',
 		'@nuxt/hints',
 		'@nuxt/icon',
@@ -191,11 +197,11 @@ export default defineNuxtConfig({
 	hooks: {
 		'ready': () => {
 			console.info(`
-================================
-${pascalCase(packageJson.name)} ${packageJson.version}
-${packageJson.homepage}
-================================
-`)
+	================================
+	${pascalCase(packageJson.name)} ${packageJson.version}
+	${packageJson.homepage}
+	================================
+	`)
 		},
 		'content:file:afterParse': (ctx) => {
 			const { permalink, path } = ctx.content as Record<string, string | undefined>
@@ -224,7 +230,7 @@ ${packageJson.homepage}
 		format: ['avif', 'webp'],
 		// Neylify 下 netlify 处理器无法显示站外图片，ipx 处理器无法显示站内图片，需彻底禁用
 		// https://github.com/nuxt/image/issues/1353
-		provider: NETLIFY ? 'none' : undefined,
+		provider: 'none',
 	},
 
 	linkChecker: {
