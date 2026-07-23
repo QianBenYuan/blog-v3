@@ -12,7 +12,7 @@ tags:
   - bash
 type: tech
 ---
-如果懒得看那么多文字，可以直接看==侧栏==
+如果懒得看那么多文字，可以直接看<mark>侧栏</mark>
 
 ## 一、bash 基础开关机 / 登录命令
 
@@ -46,13 +46,13 @@ type: tech
 
 ### （三）reboot 重启系统
 
-输入reboot再进行回车，作用：重启。==注意：谨慎使用==
+输入reboot再进行回车，作用：重启。<mark>注意：谨慎使用</mark>
 
 ```
 reboot
 ```
 
-输入reboot再进行回车，作用：重启。==注意：谨慎使用==
+输入reboot再进行回车，作用：重启。<mark>注意：谨慎使用</mark>
 
 ![f27eeb3df808680b0b938a890e4274b9](/assets/linux-command-line-guide/f27eeb3df808680b0b938a890e4274b9.png)
 
@@ -102,7 +102,7 @@ ls
 
 ![image-20260722220408062](/assets/linux-command-line-guide/image-20260722220408062.png)
 
-#### 2.ls .. 看上一级目录（==以下注意空格==）
+#### 2.ls .. 看上一级目录（<mark>以下注意空格</mark>）
 
  ls .. 看上一级目录/上一级文件夹，查看当前文件夹外面一层的内容
 
@@ -150,7 +150,7 @@ ls -al
 
 ![image-20260722221918325](/assets/linux-command-line-guide/image-20260722221918325.png)
 
-### （三）cd的使用，切换文件夹（进入 / 返回文件夹）（==以下注意空格==）
+### （三）cd的使用，切换文件夹（进入 / 返回文件夹）（<mark>以下注意空格</mark>）
 
 #### 1.cd / 进入系统根目录
 
@@ -230,7 +230,7 @@ cd ~
 
 ![image-20260722223653264](/assets/linux-command-line-guide/image-20260722223653264.png)
 
-### （四）mkdir 创建文件夹（==以下注意空格==）
+### （四）mkdir 创建文件夹（<mark>以下注意空格</mark>）
 
 #### 1.当前目录新建 test1（mkdir test1）
 
@@ -410,7 +410,7 @@ mv -i test1 fun
 
 ### （八）rm/rmdir删除
 
-#### 1.rm 删除==文件==
+#### 1.rm 删除<mark>文件</mark>
 
 删除 test1 里的 huawei.txt：
 
@@ -422,7 +422,7 @@ rm /root/test1/huawei.txt
 
 ![image-20260722230016494](/assets/linux-command-line-guide/image-20260722230016494.png)
 
-#### 2.rmdir 删除==空文件夹==
+#### 2.rmdir 删除<mark>空文件夹</mark>
 
 只能删里面没有文件的空文件夹：
 
@@ -434,7 +434,7 @@ rmdir /root/test1
 
 如果文件夹有内容，会报错，要用 rm -r
 
-#### 3.rm -r 删除==带内容的文件夹==
+#### 3.rm -r 删除<mark>带内容的文件夹</mark>
 
 有删除确认提示，每个文件都要你手动输 y 确认
 
@@ -682,7 +682,7 @@ EOF
 
 ![image-20260723135215158](/assets/linux-command-line-guide/image-20260723135215158.png)
 
-==注意：会被覆盖==
+<mark>注意：会被覆盖</mark>
 
 #### 方法 3：nano 文本编辑器（可视化打字）
 
