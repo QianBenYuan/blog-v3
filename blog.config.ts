@@ -83,8 +83,8 @@ const blogConfig = {
 
 	/** 自己部署的 Twikoo 服务 */
 	twikoo: {
-		envId: 'https://twikoo.example.site/',
-		preload: 'https://twikoo.example.site/',
+		envId: 'https://twikoo-dmki-nqdbbnz6j-qian-ben-yuan.vercel.app/',
+		preload: 'https://twikoo-dmki-nqdbbnz6j-qian-ben-yuan.vercel.app/',
 	},
 }
 
