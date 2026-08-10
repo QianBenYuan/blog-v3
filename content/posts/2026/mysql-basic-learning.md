@@ -30,7 +30,7 @@ SQL语句
 
 ![image-20260730153535636](/assets/mysql-basic/image-20260730153535636.png)
 
-### 02.基础-课程内容-数据库相关概念
+#### 02.基础-课程内容-数据库相关概念
 
 ![image-20260730154230946](/assets/mysql-basic/image-20260730154230946.png)
 
@@ -38,7 +38,7 @@ SQL语句
 
 ![image-20260730154620938](/assets/mysql-basic/image-20260730154620938.png)
 
-### 03.WySQL数据库
+#### 03.WySQL数据库
 
 我建议先在虚拟机安装Windows10，把MySQL安装在虚拟机Windows10里
 
@@ -68,7 +68,7 @@ https://dev.mysql.com/downloads/windows/installer/8.0.html
 
 ![image-20260730210338083](/assets/mysql-basic/image-20260730210338083.png)
 
-### 参数作用  
+##### 参数作用
 
 - -u 登录用户名  **参数全称：** --user   **含义：**指定登录用户名 -u root  = 使用账号  root  登录
 - -p 密码  **参数全称：** --password **含义：**需要输入密码
@@ -76,7 +76,7 @@ https://dev.mysql.com/downloads/windows/installer/8.0.html
 - -P 数据库端口（大写！）  **参数全称：** -P = --port 指定端口（**大写P**！！)
 - -e 执行一条SQL语句，不用进入交互界面 
 
-### 04.基础-概述-数据模型
+#### 04.基础-概述-数据模型
 
 ![image-20260810164018666](/assets/mysql-basic/image-20260810164018666.png)
 
@@ -90,19 +90,19 @@ https://dev.mysql.com/downloads/windows/installer/8.0.html
 
 ![image-20260802154706957](/assets/mysql-basic/image-20260802154706957.png)
 
-### 06.基础-SQL-DDL-数据库操作
+#### 06.基础-SQL-DDL-数据库操作
 
 ![image-20260802154949500](/assets/mysql-basic/image-20260802154949500.png)
 
 
 
-### 07.基础-SQL-DDL-表操作-创建&查询
+##### 07.基础-SQL-DDL-表操作-创建&查询
 
 ![image-20260803143140384](/assets/mysql-basic/image-20260803143140384.png)
 
 ![image-20260803143359700](/assets/mysql-basic/image-20260803143359700.png)
 
-### 08.基础-SQL-DDL-数据类型及案例
+##### 08.基础-SQL-DDL-数据类型及案例
 
 ![image-20260803144820492](/assets/mysql-basic/image-20260803144820492.png)
 
@@ -114,7 +114,7 @@ https://dev.mysql.com/downloads/windows/installer/8.0.html
 
 ![image-20260803153515361](/assets/mysql-basic/image-20260803153515361.png)
 
-### 09.基础-SQL-DDL-表操作-修改&删除
+##### 09.基础-SQL-DDL-表操作-修改&删除
 
 ![image-20260803204453979](/assets/mysql-basic/image-20260803204453979.png)
 
@@ -126,7 +126,7 @@ https://dev.mysql.com/downloads/windows/installer/8.0.html
 
 ![image-20260804093117233](/assets/mysql-basic/image-20260804093117233.png)
 
-### 10.基础-SQL-DDL小结
+##### 10.基础-SQL-DDL小结
 
 ![image-20260804093535345](/assets/mysql-basic/image-20260804093535345.png)
 
@@ -224,7 +224,7 @@ create database test;
 
 ![image-20260804162704973](/assets/mysql-basic/image-20260804162704973.png)
 
-### 13.基础-SQL-DML-更新和删除
+#### 13.基础-SQL-DML-更新和删除
 
 ![image-20260804164514096](/assets/mysql-basic/image-20260804164514096.png)
 
@@ -238,7 +238,7 @@ create database test;
 
 ![image-20260804164747010](/assets/mysql-basic/image-20260804164747010.png)
 
-### 14. 基础-SQL-DML小结
+#### 14. 基础-SQL-DML小结
 
 ![image-20260804165021740](/assets/mysql-basic/image-20260804165021740.png)
 
@@ -250,7 +250,7 @@ create database test;
 
 ![image-20260804190357153](/assets/mysql-basic/image-20260804190357153.png)
 
-### 16.基础-SQL-DQL-条件查询
+#### 16.基础-SQL-DQL-条件查询
 
 ![image-20260804191501912](/assets/mysql-basic/image-20260804191501912.png)
 
@@ -266,7 +266,7 @@ create database test;
 
 ![image-20260804192348006](/assets/mysql-basic/image-20260804192348006.png)
 
-### 17.基础-SQL-DQL-聚合函数
+#### 17.基础-SQL-DQL-聚合函数
 
 ![image-20260804192444269](/assets/mysql-basic/image-20260804192444269.png)
 
@@ -276,7 +276,7 @@ create database test;
 
 ![image-20260804192814262](/assets/mysql-basic/image-20260804192814262.png)
 
-### 18.基础-SQL-DQL-分组查询
+#### 18.基础-SQL-DQL-分组查询
 
 ![image-20260804192856040](/assets/mysql-basic/image-20260804192856040.png)
 
@@ -286,19 +286,19 @@ create database test;
 
 ![image-20260804193504097](/assets/mysql-basic/image-20260804193504097.png)
 
-### 19.基础-SQL-DQL-排序查询
+#### 19.基础-SQL-DQL-排序查询
 
 ![image-20260805110548433](/assets/mysql-basic/image-20260805110548433.png)
 
 ![image-20260805110909312](/assets/mysql-basic/image-20260805110909312.png)
 
-### 20.基础-SQL-DQL-分页查询
+#### 20.基础-SQL-DQL-分页查询
 
 ![image-20260805110956576](/assets/mysql-basic/image-20260805110956576.png)
 
 ![image-20260805111223148](/assets/mysql-basic/image-20260805111223148.png)
 
-### 21.基础-SQL-DQL-案例练习
+#### 21.基础-SQL-DQL-案例练习
 
 ![image-20260805111300515](/assets/mysql-basic/image-20260805111300515.png)
 
@@ -306,7 +306,7 @@ create database test;
 
 ![image-20260805111804048](/assets/mysql-basic/image-20260805111804048.png)
 
-### 22.基础-SQL-DQL-执行顺序
+#### 22.基础-SQL-DQL-执行顺序
 
 ![image-20260805111947964](/assets/mysql-basic/image-20260805111947964.png)
 
@@ -316,7 +316,7 @@ create database test;
 
 ![image-20260805112133470](/assets/mysql-basic/image-20260805112133470.png)
 
-### 23.基础-SQL-DQL小结
+#### 23.基础-SQL-DQL小结
 
 ![image-20260805112512627](/assets/mysql-basic/image-20260805112512627.png)
 
@@ -338,7 +338,7 @@ create database test;
 
 ![image-20260805122253661](/assets/mysql-basic/image-20260805122253661.png)
 
-### 25.基础-SQL-DCL-权限控制
+#### 25.基础-SQL-DCL-权限控制
 
 ![image-20260805122338378](/assets/mysql-basic/image-20260805122338378.png)
 
@@ -352,7 +352,7 @@ create database test;
 
 ![image-20260805122744685](/assets/mysql-basic/image-20260805122744685.png)
 
-### 26.基础-SQL-DCL小结
+#### 26.基础-SQL-DCL小结
 
 ![image-20260805122918998](/assets/mysql-basic/image-20260805122918998.png)
 
@@ -376,7 +376,7 @@ create database test;
 
 ![image-20260805153055299](/assets/mysql-basic/image-20260805153055299.png)
 
-### 28.基础-函数-数值函数
+#### 28.基础-函数-数值函数
 
 ![image-20260805153127875](/assets/mysql-basic/image-20260805153127875.png)
 
@@ -398,7 +398,7 @@ create database test;
 
 ![image-20260805153704704](/assets/mysql-basic/image-20260805153704704.png)
 
-### 29.基础-函数-日期函数
+#### 29.基础-函数-日期函数
 
 ![image-20260805153745224](/assets/mysql-basic/image-20260805153745224.png)
 
@@ -420,7 +420,7 @@ create database test;
 
 ![image-20260805154727903](/assets/mysql-basic/image-20260805154727903.png)
 
-### 30.基础-函数-流程函数
+#### 30.基础-函数-流程函数
 
 ![image-20260805154802968](/assets/mysql-basic/image-20260805154802968.png)
 
@@ -442,7 +442,7 @@ create database test;
 
 ![image-20260805155436903](/assets/mysql-basic/image-20260805155436903.png)
 
-### 31.基础-函数-小结
+#### 31.基础-函数-小结
 
 ![image-20260805155555430](/assets/mysql-basic/image-20260805155555430.png)
 
@@ -454,7 +454,7 @@ create database test;
 
 ![image-20260805161602099](/assets/mysql-basic/image-20260805161602099.png)
 
-### 33.基础-约束-演示
+#### 33.基础-约束-演示
 
 ![image-20260805162031257](/assets/mysql-basic/image-20260805162031257.png)
 
@@ -474,7 +474,7 @@ name不能为空且唯一
 
 可以在这里进行添加
 
-### 34.基础-约束-外键约束
+#### 34.基础-约束-外键约束
 
 ![image-20260805162948207](/assets/mysql-basic/image-20260805162948207.png)
 
@@ -486,7 +486,7 @@ name不能为空且唯一
 
 ![image-20260805163400679](/assets/mysql-basic/image-20260805163400679.png)
 
-### 35.基础-约束-外键删除更新行为
+#### 35.基础-约束-外键删除更新行为
 
 ![image-20260805163805233](/assets/mysql-basic/image-20260805163805233.png)
 
@@ -508,7 +508,7 @@ name不能为空且唯一
 
 ![image-20260805164333557](/assets/mysql-basic/image-20260805164333557.png)
 
-### 36.基础-约束-小结
+#### 36.基础-约束-小结
 
 ![image-20260805164528531](/assets/mysql-basic/image-20260805164528531.png)
 
@@ -530,7 +530,7 @@ name不能为空且唯一
 
 ![image-20260805183925989](/assets/mysql-basic/image-20260805183925989.png)
 
-### 38.基础-多表查询-概述
+#### 38.基础-多表查询-概述
 
 ![image-20260805184324533](/assets/mysql-basic/image-20260805184324533.png)
 
@@ -538,7 +538,7 @@ name不能为空且唯一
 
 ![image-20260805184523114](/assets/mysql-basic/image-20260805184523114.png)
 
-### 39.基础-多表查询-内连接
+#### 39.基础-多表查询-内连接
 
 ![image-20260805184647465](/assets/mysql-basic/image-20260805184647465.png)
 
@@ -550,7 +550,7 @@ name不能为空且唯一
 
 ![image-20260805185106301](/assets/mysql-basic/image-20260805185106301.png)
 
-### 40.基础-多表查询-外连接
+#### 40.基础-多表查询-外连接
 
 ![image-20260805192904395](/assets/mysql-basic/image-20260805192904395.png)
 
@@ -558,7 +558,7 @@ name不能为空且唯一
 
 ![image-20260805193822734](/assets/mysql-basic/image-20260805193822734.png)
 
-### 41.基础-多表查询-自连接
+#### 41.基础-多表查询-自连接
 
 ![image-20260805194017252](/assets/mysql-basic/image-20260805194017252.png)
 
@@ -568,7 +568,7 @@ name不能为空且唯一
 
 ![image-20260805194616282](/assets/mysql-basic/image-20260805194616282.png)
 
-### 42.基础-多表查询-联合查询union
+#### 42.基础-多表查询-联合查询union
 
 ![image-20260805195350359](/assets/mysql-basic/image-20260805195350359.png)
 
@@ -586,11 +586,11 @@ name不能为空且唯一
 
 ![image-20260805195913718](/assets/mysql-basic/image-20260805195913718.png)
 
-### 43.基础-多表查询-子查询介绍
+#### 43.基础-多表查询-子查询介绍
 
 ![image-20260805200436623](/assets/mysql-basic/image-20260805200436623.png)
 
-### 44.基础-多表查询-标量子查询
+#### 44.基础-多表查询-标量子查询
 
 ![image-20260805200520213](/assets/mysql-basic/image-20260805200520213.png)
 
@@ -602,7 +602,7 @@ name不能为空且唯一
 
 ![image-20260805201248733](/assets/mysql-basic/image-20260805201248733.png)
 
-### 45.基础-多表查询-列子查询
+#### 45.基础-多表查询-列子查询
 
 ![image-20260805201407570](/assets/mysql-basic/image-20260805201407570.png)
 
@@ -618,7 +618,7 @@ name不能为空且唯一
 
 ![image-20260805202327303](/assets/mysql-basic/image-20260805202327303.png)
 
-### 46.基础-多表查询-行子查询
+#### 46.基础-多表查询-行子查询
 
 ![image-20260805202523072](/assets/mysql-basic/image-20260805202523072.png)
 
@@ -628,13 +628,13 @@ name不能为空且唯一
 
 ![image-20260805202745622](/assets/mysql-basic/image-20260805202745622.png)
 
-### 47.基础-多表查询-表子查询
+#### 47.基础-多表查询-表子查询
 
 ![image-20260806162515154](/assets/mysql-basic/image-20260806162515154.png)
 
 ![image-20260806162656982](/assets/mysql-basic/image-20260806162656982.png)
 
-### 48.基础-多表查询-练习1
+#### 48.基础-多表查询-练习1
 
 ![image-20260806162736881](/assets/mysql-basic/image-20260806162736881.png)
 
@@ -666,7 +666,7 @@ name不能为空且唯一
 
 ![image-20260806165020448](/assets/mysql-basic/image-20260806165020448.png)
 
-### 49.基础-多表查询-练习2
+##### 49.基础-多表查询-练习2
 
 ![image-20260806171333643](/assets/mysql-basic/image-20260806171333643.png)
 
@@ -694,7 +694,7 @@ name不能为空且唯一
 
 ![image-20260806172450249](/assets/mysql-basic/image-20260806172450249.png)
 
-### 50.基础-多表查询-小结
+#### 50.基础-多表查询-小结
 
 ![image-20260806172618895](/assets/mysql-basic/image-20260806172618895.png)
 
@@ -708,7 +708,7 @@ name不能为空且唯一
 
 ![image-20260810144638890](/assets/mysql-basic/image-20260810144638890.png)
 
-### 52.基础-事务-操作演示
+#### 52.基础-事务-操作演示
 
 ![image-20260810144724322](/assets/mysql-basic/image-20260810144724322.png)
 
@@ -724,19 +724,19 @@ name不能为空且唯一
 
 ![image-20260810152439588](/assets/mysql-basic/image-20260810152439588.png)
 
-### 53.基础-事务-四大特性ACID
+#### 53.基础-事务-四大特性ACID
 
 ![image-20260810152800132](/assets/mysql-basic/image-20260810152800132.png)
 
-### 54.基础-事务-并发事务问题
+#### 54.基础-事务-并发事务问题
 
 ![image-20260810153103684](/assets/mysql-basic/image-20260810153103684.png)
 
-### 55.基础-事务-并发事务演示及隔离级别
+#### 55.基础-事务-并发事务演示及隔离级别
 
 ![image-20260810153900327](/assets/mysql-basic/image-20260810153900327.png)
 
-### 56.基础-事务-小结
+#### 56.基础-事务-小结
 
 ![image-20260810155117217](/assets/mysql-basic/image-20260810155117217.png)
 
