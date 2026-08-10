@@ -24,17 +24,17 @@ SQL语句
 
 集群
 
-![image-20260730153510427](D:\虚拟机\share File\文章图\Typora图\image-20260730153510427.png)
+![image-20260730153510427](/assets/mysql-basic/image-20260730153510427.png)
 
-![image-20260730153535636](D:\虚拟机\share File\文章图\Typora图\image-20260730153535636.png)
+![image-20260730153535636](/assets/mysql-basic/image-20260730153535636.png)
 
 ### 02.基础-课程内容-数据库相关概念
 
-![image-20260730154230946](D:\虚拟机\share File\文章图\Typora图\image-20260730154230946.png)
+![image-20260730154230946](/assets/mysql-basic/image-20260730154230946.png)
 
 数据库相关概念
 
-![image-20260730154620938](D:\虚拟机\share File\文章图\Typora图\image-20260730154620938.png)
+![image-20260730154620938](/assets/mysql-basic/image-20260730154620938.png)
 
 ### 03.WySQL数据库
 
@@ -42,29 +42,29 @@ SQL语句
 
 https://dev.mysql.com/get/Downloads/MySQLInstaller/mysql-installer-community-8.0.46.0.msi
 
-![image-20260730155045794](D:\虚拟机\share File\文章图\Typora图\image-20260730155045794.png)
+![image-20260730155045794](/assets/mysql-basic/image-20260730155045794.png)
 
 ```
 https://dev.mysql.com/downloads/windows/installer/8.0.html
 ```
 
-![image-20260730161312722](D:\虚拟机\share File\文章图\Typora图\image-20260730161312722.png)
+![image-20260730161312722](/assets/mysql-basic/image-20260730161312722.png)
 
 不需要点上面的，会去到Oracle进行账号登录
 
-![image-20260730161430269](D:\虚拟机\share File\文章图\Typora图\image-20260730161430269.png)
+![image-20260730161430269](/assets/mysql-basic/image-20260730161430269.png)
 
-![image-20260730205513452](D:\虚拟机\share File\文章图\Typora图\image-20260730205513452.png)
+![image-20260730205513452](/assets/mysql-basic/image-20260730205513452.png)
 
-![image-20260730205609633](D:\虚拟机\share File\文章图\Typora图\image-20260730205609633.png)
+![image-20260730205609633](/assets/mysql-basic/image-20260730205609633.png)
 
-![image-20260730205926202](D:\虚拟机\share File\文章图\Typora图\image-20260730205926202.png)
+![image-20260730205926202](/assets/mysql-basic/image-20260730205926202.png)
 
-![image-20260730210143995](D:\虚拟机\share File\文章图\Typora图\image-20260730210143995.png)
+![image-20260730210143995](/assets/mysql-basic/image-20260730210143995.png)
 
-![image-20260730210310274](D:\虚拟机\share File\文章图\Typora图\image-20260730210310274.png)
+![image-20260730210310274](/assets/mysql-basic/image-20260730210310274.png)
 
-![image-20260730210338083](D:\虚拟机\share File\文章图\Typora图\image-20260730210338083.png)
+![image-20260730210338083](/assets/mysql-basic/image-20260730210338083.png)
 
 ### 参数作用  
 
