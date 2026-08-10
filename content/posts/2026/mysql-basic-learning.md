@@ -78,11 +78,11 @@ https://dev.mysql.com/downloads/windows/installer/8.0.html
 
 ### 04.基础-概述-数据模型
 
-![image-20260810164018666](../文章图/Typora图/image-20260810164018666.png)
+![image-20260810164018666](/assets/mysql-basic/image-20260810164018666.png)
 
-![image-20260810164052193](../文章图/Typora图/image-20260810164052193.png)
+![image-20260810164052193](/assets/mysql-basic/image-20260810164052193.png)
 
-![image-20260810164115510](../文章图/Typora图/image-20260810164115510.png)
+![image-20260810164115510](/assets/mysql-basic/image-20260810164115510.png)
 
 ### 05.基础-SQL-通用语法及分类
 
