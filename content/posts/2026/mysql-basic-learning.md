@@ -1,7 +1,7 @@
 ---
 title: "MySQL 基础篇学习笔记"
 description: "通过黑马程序员学习 MySQL 的基础笔记，涵盖数据库概念、SQL 语句、数据类型、约束、多表查询、事务等核心知识点。"
-image: /assets/mysql-basic/image-20260730153510427.png
+image: /assets/1B77C18732F4B4848A53918342CF3840.jpg
 date: 2026-08-10
 categories:
   - 技术
