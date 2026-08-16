@@ -1,6 +1,7 @@
 ---
 title: "PHP基础篇学习笔记"
 description: "通过bilibili学习PHP基础笔记，涵盖PHP简介、搭建环境、Apache安装配置、静态/动态网页访问流程等核心知识点。"
+image: /assets/A27D621B7F16ABDD257F0085DCADE955.jpg
 date: 2026-08-11
 categories:
   - 技术
