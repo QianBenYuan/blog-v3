@@ -162,24 +162,26 @@ type: tech
 ### 2.3 xsstrike — XSS 扫描工具
 
 - **作用**：自动化检测跨站脚本（XSS）漏洞，相比传统工具具有更强的绕过检测能力，支持 DOM 型 XSS 检测。
-- **下载方式**：
+- **下载方式**：XSStrike 不在 PyPI 上，需通过 git clone 安装：
   ```bash
-  pip3 install xsstrike
+  git clone https://github.com/s0md3v/XSStrike
+  cd XSStrike
+  pip3 install -r requirements.txt
   ```
 - **源码地址**：https://github.com/s0md3v/XSStrike
-- **基本用法**：
+- **基本用法**（在 XSStrike 目录下执行）：
   ```bash
   # 检测单个 URL
-  xsstrike -u "http://target.com/?q=test"
+  python3 xsstrike.py -u "http://target.com/?q=test"
 
   # 检测 POST 请求
-  xsstrike -u "http://target.com/search" --data "q=test"
+  python3 xsstrike.py -u "http://target.com/search" --data "q=test"
 
   # 爬取整个网站并检测
-  xsstrike -u "http://target.com/" --crawl
+  python3 xsstrike.py -u "http://target.com/" --crawl
 
   # 指定参数检测
-  xsstrike -u "http://target.com/" --params
+  python3 xsstrike.py -u "http://target.com/" --params
   ```
 
 ### 2.4 commix — 命令注入检测工具
@@ -378,10 +380,12 @@ type: tech
 
 将工具路径加入 PATH，避免每次输入完整路径。在 `~/.bashrc` 中添加：
 
+> 若在 WSL（Ubuntu）中使用，Windows 路径需加 `/mnt/c` 前缀；若在 Windows Git Bash 中则用 `/c`。
+
 ```bash
-# CTF Web 工具路径
-export PATH="$PATH:/c/Users/你的用户名/AppData/Roaming/Python/Python314/Scripts"
-export PATH="$PATH:/c/Program Files (x86)/Nmap"
+# CTF Web 工具路径（WSL 环境写法）
+export PATH="$PATH:/mnt/c/Users/你的用户名/AppData/Roaming/Python/Python314/Scripts"
+export PATH="$PATH:/mnt/c/Program Files (x86)/Nmap"
 ```
 
 配置后执行：
@@ -395,10 +399,12 @@ source ~/.bashrc
 # 验证各工具
 dirsearch --version
 sqlmap --version
-xsstrike --version
 commix --version
 nmap --version
 python3 -c "import pwn; print(pwn.__version__)"
+
+# XSStrike 无 CLI 命令，在 XSStrike 目录下执行：
+# python3 xsstrike.py --help
 ```
 
 ---
@@ -411,8 +417,12 @@ python3 -c "import pwn; print(pwn.__version__)"
 #!/bin/bash
 
 # Python 基础工具
-pip3 install dirsearch sqlmap xsstrike commix python-nmap
+pip3 install dirsearch sqlmap commix python-nmap
 pip3 install Flask Jinja2 requests aiohttp Werkzeug pwntools ROPgadget
+
+# XSStrike 不在 PyPI，需单独 clone 安装
+git clone https://github.com/s0md3v/XSStrike
+cd XSStrike && pip3 install -r requirements.txt && cd ..
 
 # 系统工具（Linux）
 # sudo apt install nmap gdb
