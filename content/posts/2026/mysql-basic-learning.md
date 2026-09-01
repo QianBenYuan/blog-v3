@@ -4,7 +4,7 @@ description: "通过黑马程序员学习 MySQL 的基础笔记，涵盖数据�
 image: /assets/1B77C18732F4B4848A53918342CF3840.jpg
 date: 2026-08-10
 categories:
-  - 技术
+  - 学习
 tags:
   - MySQL
   - 数据库

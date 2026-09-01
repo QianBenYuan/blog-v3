@@ -4,7 +4,7 @@ description: "通过bilibili学习PHP基础笔记，涵盖PHP简介、搭建环�
 image: /assets/A27D621B7F16ABDD257F0085DCADE955.jpg
 date: 2026-08-11
 categories:
-  - 技术
+  - 学习
 tags:
   - PHP
   - Web

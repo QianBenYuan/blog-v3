@@ -4,7 +4,7 @@ description: "从零开始的 Linux 命令行操作指南，涵盖开关机、�
 image: /assets/end-of-world-aiin.jpg
 date: 2026-07-23
 categories:
-  - 技术
+  - 学习
 tags:
   - Linux
   - Ubuntu

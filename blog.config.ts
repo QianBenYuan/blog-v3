@@ -35,6 +35,8 @@ const blogConfig = {
 			[basicConfig.defaultCategory]: { icon: 'tabler:circle-dashed' },
 			/** 实践可复用操作经验：工具/系统/部署/排障 */
 			技术: { icon: 'tabler:mouse', color: '#33aaff' },
+			/** 学习：学习笔记/基础教程 */
+			学习: { icon: 'tabler:book-2', color: '#22c55e' },
 			/** 编程：代码实现/工程实践/开发方法 */
 			开发: { icon: 'tabler:code', color: '#7777ff' },
 			/** 安全：漏洞/CTF/恶意软件/安全事件分析 */
