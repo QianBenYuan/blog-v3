@@ -22,7 +22,31 @@ export default [
 		desc: '我自己搭建的个人博客。',
 		entries: [
 			myFeed,
+		],
+	},
+	{
+		name: '友链',
+		desc: '校友',
+		entries: [
 			selfFeed,
+			{
+				author: 'iss-xx',
+				title: 'iss-xx',
+				desc: 'web安全菜鸟打怪升级日记',
+				link: 'https://iss-xx.xin/',
+				icon: getFavicon('iss-xx.xin'),
+				avatar: 'https://github.com/iss-xx/picx-images-hosting/raw/master/头像.4xvac2bgrs.webp',
+				date: '2026-09-01',
+			},
+			{
+				author: 'Nikki',
+				title: 'Nikki',
+				desc: "it's Nikki blog",
+				link: 'https://helloblog.de5.net/',
+				icon: getFavicon('helloblog.de5.net'),
+				avatar: 'https://tu.helloblog.de5.net/file/1788245385062_c722b895b298dc386f9914165629ccae.jpg',
+				date: '2026-09-01',
+			},
 		],
 	},
 ] satisfies FeedGroup[]
