@@ -31,7 +31,7 @@ const showAllDate = isTimeDiffSignificant(props.date, props.updated)
 				icon="tabler:clock-edit"
 			/>
 
-			<span v-if="categories" :style="{ color: getCategoryColor(categories[0]) }">
+			<span v-if="categories" class="category" :style="{ color: getCategoryColor(categories[0]) }">
 				<Icon :name="getCategoryIcon(categories[0])" />
 				{{ categories[0] }}
 			</span>

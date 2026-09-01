@@ -150,3 +150,10 @@
 		}
 	}
 }
+
+// 分类标签美化：衬线字体 + 字距
+.category {
+	font-family: var(--font-serif);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+}
