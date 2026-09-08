@@ -8,19 +8,19 @@ const basicConfig = {
 	author: {
 		name: '千本圆',
 		avatar: '/assets/avatar.jpg',
-		email: 'hi@example.cyou',
-		homepage: 'https://www.example.site/',
+		email: '',
+		homepage: 'https://blog.qianbenyuan.dpdns.org/',
 	},
 	copyright: {
 		abbr: 'CC BY-NC-SA 4.0',
 		name: '署名-非商业性使用-相同方式共享 4.0 国际',
 		url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans',
 	},
-	favicon: 'https://www.example.site/api/icon.png',
+	favicon: '/assets/avatar.jpg',
 	language: 'zh-CN',
 	timeEstablished: '2026-07-20',
 	timeZone: 'Asia/Shanghai',
-	url: 'https://blog.example.site/',
+	url: 'https://blog.qianbenyuan.dpdns.org/',
 	defaultCategory: '未分类',
 }
 
@@ -77,8 +77,6 @@ const blogConfig = {
 
 	/** 向 <head> 中添加脚本 */
 	scripts: [
-		// 自己部署的 Umami 统计服务
-		{ 'src': 'https://zhi.example.site/zhi.js', 'data-website-id': 'a1997c81-a42b-46f6-8d1d-8fbd67a8ef41', 'defer': true },
 		// 自己网站的 Cloudflare Insights 统计服务
 		{ 'src': 'https://static.cloudflareinsights.com/beacon.min.js', 'data-cf-beacon': '{"token": "97a4fe32ed8240ac8284e9bffaf03962"}', 'defer': true },
 		// Twikoo 评论系统
