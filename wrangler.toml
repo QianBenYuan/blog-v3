@@ -1,0 +1,21 @@
+# Cloudflare Worker 部署配置：博客宕机回退页
+# 部署：wrangler deploy
+# 注意：所有 [表] 之后的顶层键都属于该表，routes 必须放在 [vars] 之前！
+
+name = "blog-down-fallback"
+main = "scripts/cloudflare-down-worker.js"
+compatibility_date = "2026-09-09"
+workers_dev = false
+
+# 挂到自定义域名 blog.qianbenyuan.dpdns.org（zone: qianbenyuan.dpdns.org）
+routes = [
+  { pattern = "blog.qianbenyuan.dpdns.org/*", zone_name = "qianbenyuan.dpdns.org" },
+]
+
+# 环境变量（也可在 CF 后台 Worker → Settings → Variables 里配）
+# ORIGIN_URL  源站默认已内置为 https://blog-v3-virid.vercel.app，可覆盖
+# MAINTENANCE 设为 "1" 时强制显示宕机页
+# TIMEOUT_MS  源站超时毫秒，默认 10000
+[vars]
+# ORIGIN_URL = "https://blog-v3-virid.vercel.app"
+# MAINTENANCE = "1"
