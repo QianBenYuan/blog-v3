@@ -4,7 +4,7 @@ description: "整理 CTF Web 方向所需的环境工具，介绍每种工具的
 image: /assets/西环莫伊.jpg
 date: 2026-08-23
 categories:
-  - 技术
+  - 工具
 tags:
   - CTF
   - Web
