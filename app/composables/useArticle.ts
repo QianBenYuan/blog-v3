@@ -30,6 +30,15 @@ export function getArticleIndexOptions(path = 'posts/%') {
 		.all()
 }
 
+/** 分类下拉项：把文章的 categories 数组当成「分类路径」逐层展开 */
+export interface CategoryOption {
+	value: string
+	/** 0 为顶层分类，> 0 为子分类 */
+	depth: number
+	parent?: string
+	posts: number
+}
+
 interface UseCategoryOptions {
 	bindQuery?: string
 }
@@ -41,11 +50,33 @@ export function useCategory(list: MaybeRefOrGetter<ArticleProps[]>, options?: Us
 		? useRouteQuery(bindQuery, undefined)
 		: ref<string | undefined>()
 
-	const categories = computed(() => [...new Set(toValue(list).map(item => item.categories?.[0]))])
+	const categories = computed<CategoryOption[]>(() => {
+		const options: CategoryOption[] = []
+		const index = new Map<string, CategoryOption>()
 
+		for (const item of toValue(list)) {
+			const path = (item.categories ?? []).filter(Boolean)
+
+			path.forEach((name, depth) => {
+				let option = index.get(name)
+				if (!option) {
+					// 顺序沿用原来的「首次出现」行为
+					option = { value: name, depth, parent: path[depth - 1], posts: 0 }
+					index.set(name, option)
+					options.push(option)
+				}
+				// 父分类的计数包含其子分类下的文章
+				option.posts++
+			})
+		}
+
+		return options
+	})
+
+	// 只要路径里含有该分类就算命中，所以选父分类会连子分类的文章一起带出来
 	const listCategorized = computed(
 		() => toValue(list).filter(
-			item => !category.value || item.categories?.[0] === category.value,
+			item => !category.value || (item.categories ?? []).includes(category.value),
 		),
 	)
 
@@ -98,14 +129,42 @@ export function useArticleSort(list: MaybeRefOrGetter<ArticleProps[]>, options?:
 	}
 }
 
+interface CategoryMeta {
+	icon?: string
+	color?: string
+	children?: Record<string, CategoryMeta>
+}
+
+/** 查分类元数据：先查顶层，再查各分类的子分类；子分类没定义的字段自动继承父级 */
+function findCategoryMeta(category?: string): CategoryMeta | undefined {
+	if (!category)
+		return undefined
+
+	const categories = useAppConfig().article.categories as Record<string, CategoryMeta>
+	const root = categories[category]
+	if (root)
+		return root
+
+	for (const parent of Object.values(categories)) {
+		const child = parent?.children?.[category]
+		if (child)
+			return { ...parent, ...child }
+	}
+
+	return undefined
+}
+
 export function getCategoryIcon(category?: string) {
-	const appConfig = useAppConfig()
-	return appConfig.article.categories[category!]?.icon ?? 'tabler:folder'
+	return findCategoryMeta(category)?.icon ?? 'tabler:folder'
 }
 
 export function getCategoryColor(category?: string) {
-	const appConfig = useAppConfig()
-	return appConfig.article.categories[category!]?.color
+	return findCategoryMeta(category)?.color
+}
+
+/** 分类路径拼成展示文案：['比赛', 'moectf'] -> '比赛 · moectf' */
+export function formatCategoryPath(categories?: string[]) {
+	return (categories ?? []).filter(Boolean).join(' · ')
 }
 
 interface GetPostTypeClassNameOptions {

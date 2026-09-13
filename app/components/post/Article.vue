@@ -31,9 +31,9 @@ const showAllDate = isTimeDiffSignificant(props.date, props.updated)
 				icon="tabler:clock-edit"
 			/>
 
-			<span v-if="categories" class="category" :style="{ color: getCategoryColor(categories[0]) }">
-				<Icon :name="getCategoryIcon(categories[0])" />
-				{{ categories[0] }}
+			<span v-if="categories" class="category" :style="{ color: getCategoryColor(categories.at(-1)) }">
+				<Icon :name="getCategoryIcon(categories.at(-1))" />
+				{{ formatCategoryPath(categories) }}
 			</span>
 
 			<span v-if="readingTime?.words" class="article-words">

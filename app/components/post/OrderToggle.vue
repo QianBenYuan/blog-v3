@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import type { CategoryOption } from '~/composables/useArticle'
 import type { ArticleOrderType } from '~/types/article'
 
 const props = defineProps<{
 	// 强制允许或禁止升序
 	enableAscending?: boolean
 	disableAscending?: boolean
-	categories?: (string | undefined)[]
+	categories?: CategoryOption[]
 	secretDelay?: string
 }>()
 
@@ -46,9 +47,15 @@ function toggleDirection() {
 				<span>全部分类</span>
 			</button>
 
-			<button v-for="item in categories" :key="item" :class="{ active: item === category }" @click="hide(), category = item">
-				<Icon :name="getCategoryIcon(item)" />
-				<span>{{ item }}</span>
+			<button
+				v-for="item in categories"
+				:key="item.value"
+				:class="{ active: item.value === category, sub: item.depth > 0 }"
+				@click="hide(), category = item.value"
+			>
+				<Icon :name="getCategoryIcon(item.value)" />
+				<span>{{ item.value }}</span>
+				<span class="count">{{ item.posts }}</span>
 			</button>
 		</template>
 	</ZDropdown>
