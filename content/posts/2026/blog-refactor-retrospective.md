@@ -1,7 +1,7 @@
 ---
 title: "博客改造复盘：从 Typora 高亮到 SSH 免密推送"
 description: "一天内动了博客的四处地方：让 Typora 的等号高亮在博客上正常显示、给「比赛」加上 moectf 子分类、关掉刷屏的行尾校验、把推送从 HTTPS 换成 SSH。记录每一步是怎么把范围缩到真凶的，以及踩过的坑。"
-image: /assets/校园，日光.jpg
+image: /assets/西幻，黑暗.jpg
 date: 2026-09-13
 categories:
   - 杂谈
