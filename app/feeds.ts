@@ -10,6 +10,7 @@ const selfFeed = {
 	title: "HACKED's Blog",
 	desc: '一个刚刚入门的pwner，大手子ddw',
 	link: 'https://blog.ss0t-hacked.top',
+	icon: getFavicon('blog.ss0t-hacked.top'),
 	avatar: 'https://q1.qlogo.cn/g?b=qq&nk=3255154997&s=640',
 	archs: ['Nuxt', 'Vercel'],
 	date: '2026-07-20',
