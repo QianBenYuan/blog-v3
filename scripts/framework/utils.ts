@@ -22,7 +22,7 @@ export interface ServerResp {
 	url: string
 	code: number
 	time: number
-	archs: string[]
+	archs: readonly string[]
 	server: string
 	certDomains: string[]
 	ipCertDomains: string[]

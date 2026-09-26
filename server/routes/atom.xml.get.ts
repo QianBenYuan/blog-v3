@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
 		id: getUrl(post.path),
 		title: post.title ?? '',
 		updated: formatIsoDate(post.updated),
-		author: { name: post.author || blogConfig.author.name },
+		author: { name: blogConfig.author.name },
 		content: {
 			$type: 'html',
 			$: renderContent(post),

@@ -16,7 +16,7 @@ export interface FeedEntry {
 	/** 个人头像 */
 	avatar: string
 	/** 博客技术架构 */
-	archs?: Arch[]
+	archs?: readonly Arch[]
 	/** 订阅日期 */
 	date: string
 	/** 博主备注 */
