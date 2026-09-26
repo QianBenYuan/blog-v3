@@ -63,7 +63,7 @@ export default [
 				desc: '芸璟的个人技术博客，记录 Web 安全、开发与学习笔记',
 				link: 'https://zhonghai2006.github.io/boke-github.io/',
 				icon: getFavicon('zhonghai2006.github.io'),
-				avatar: '/assets/friends/zhonghai2006.jpg',
+				avatar: 'https://zhonghai2006.github.io/boke-github.io/img/xiaobaobao.png',
 				date: '2026-09-26',
 			},
 		],
