@@ -57,6 +57,15 @@ export default [
 				avatar: 'https://zelia.top/avatar.png',
 				date: '2026-09-26',
 			},
+			{
+				author: '芸璟',
+				title: 'yun jing',
+				desc: '芸璟的个人技术博客，记录 Web 安全、开发与学习笔记',
+				link: 'https://zhonghai2006.github.io/boke-github.io/',
+				icon: getFavicon('zhonghai2006.github.io'),
+				avatar: '/assets/friends/zhonghai2006.jpg',
+				date: '2026-09-26',
+			},
 		],
 	},
 ] satisfies FeedGroup[]
