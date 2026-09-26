@@ -47,6 +47,15 @@ export default [
 				avatar: 'https://tu.helloblog.de5.net/file/1788245385062_c722b895b298dc386f9914165629ccae.jpg',
 				date: '2026-09-01',
 			},
+			{
+				author: 'Zelia',
+				title: 'Zelia',
+				desc: '唯有行动才能解决所有的不安',
+				link: 'https://zelia.top/',
+				icon: getFavicon('zelia.top'),
+				avatar: 'https://zelia.top/avatar.png',
+				date: '2026-09-26',
+			},
 		],
 	},
 ] satisfies FeedGroup[]
