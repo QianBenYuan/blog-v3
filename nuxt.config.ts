@@ -215,9 +215,9 @@ export default defineNuxtConfig({
 				ctx.content.path = path.slice('/posts'.length)
 
 			// 正文加密必须放在最后：拿到的是完全解析好的正文
-			const encrypted = applyContentEncryption(ctx.content)
+			const encrypted = applyContentEncryption(ctx.content, ctx.file?.body)
 			// 源文件加密模式：把加密结果写回 .md，推上公开仓库的源文件就不含明文和密码
-			if (process.env.ENCRYPT_BACKFILL && encrypted && ctx.file?.path)
+			if (env.ENCRYPT_BACKFILL && encrypted && ctx.file?.path)
 				writeBackEncryptedFile(ctx.file.path, ctx.content)
 		},
 	},

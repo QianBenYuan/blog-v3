@@ -31,6 +31,12 @@ export interface ArticleSchema {
 	passwordEnv?: string
 	/** 明文展示给访客的密码提示 */
 	passwordHint?: string
+	/**
+	 * 自动解锁时间（北京时间，格式 "2027-10-07 00:00:00"）：
+	 * 到期后重新构建部署即自动公开，无需密码。
+	 * 对「源文件密文版」同样生效：构建时用 passwordEnv 对应环境变量解密恢复。
+	 */
+	unlockAt?: string
 	/** 构建时加密后的标记 */
 	encrypted?: boolean
 	/** 密文格式，ast = 加密的是构建期解析好的正文 */
@@ -63,6 +69,7 @@ const articleSchema = z.object({
 	password: z.string().optional(),
 	passwordEnv: z.string().optional(),
 	passwordHint: z.string().optional(),
+	unlockAt: z.string().optional(),
 	encrypted: z.boolean().default(false),
 	encryptedFormat: z.enum(['ast']).optional(),
 	encryptedData: z.object({

@@ -1,0 +1,40 @@
+name: auto-unlock
+
+on:
+  # 每天 00:30 UTC = 08:30 北京时间，检查是否有加密文章到自动解锁时间
+  schedule:
+    - cron: '30 0 * * *'
+  # 也可以手动触发：仓库 Actions 页面 → auto-unlock → Run workflow
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unlock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 解密到期文章并重写为明文
+        run: node scripts/unlock-posts.mjs
+        env:
+          # 每个 passwordEnv 变量名都需要对应一个同名仓库 Secret。
+          # 例：文章 frontmatter 写 passwordEnv: "MOECTF_PW"，
+          #     就去仓库 Settings → Secrets and variables → Actions 建 MOECTF_PW = 密码。
+          MOECTF_PW: ${{ secrets.MOECTF_PW }}
+
+      - name: 有改动则提交推送（触发 Vercel 重新构建）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "auto-unlock bot"
+            git config user.email "auto-unlock@users.noreply.github.com"
+            git add content
+            git commit -m "chore: 加密文章到期自动解锁"
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+            echo "已推送解锁提交"
+          else
+            echo "没有到期待解锁的文章"
+          fi
