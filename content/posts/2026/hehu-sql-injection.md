@@ -14,7 +14,7 @@ tags:
 type: tech
 passwordEnv: "MOECTF_PW"
 passwordHint: "想要密码？找到小圆了就给你嘿嘿"
-unlockAt: "2027-10-07 00:00:00"
+unlockAt: "2026-10-10 00:00:00"
 encrypted: true
 encryptedFormat: ast
 encryptedData:
