@@ -18,6 +18,11 @@ const showAllDate = isTimeDiffSignificant(props.date, props.updated)
 		</p>
 
 		<div class="article-info">
+			<span v-if="encrypted" class="article-lock">
+				<Icon name="tabler:lock" />
+				加密
+			</span>
+
 			<UtilDate
 				v-if="date && (showAllDate || !useUpdated)"
 				:date
@@ -75,6 +80,16 @@ const showAllDate = isTimeDiffSignificant(props.date, props.updated)
 	.use-updated {
 		order: -1;
 	}
+}
+
+.article-lock {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.2em;
+	padding: 0 0.5em;
+	border: 1px solid var(--c-bg-soft);
+	border-radius: 999px;
+	color: var(--c-primary);
 }
 
 .article-title {

@@ -26,7 +26,7 @@ export function useArticle(path?: MaybeRefOrGetter<string | undefined>) {
 export function getArticleIndexOptions(path = 'posts/%') {
 	return queryCollection('content')
 		.where('stem', 'LIKE', path)
-		.select('categories', 'date', 'description', 'image', 'path', 'readingTime', 'recommend', 'tags', 'title', 'type', 'updated')
+		.select('categories', 'date', 'description', 'encrypted', 'image', 'path', 'readingTime', 'recommend', 'tags', 'title', 'type', 'updated')
 		.all()
 }
 

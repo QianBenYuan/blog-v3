@@ -25,6 +25,19 @@ export interface ArticleSchema {
 	draft?: boolean
 	permalink?: string
 
+	/** 密码明文（只存在于源文件，构建时读取后立即删除，不会进入产物） */
+	password?: string
+	/** 改从环境变量读取密码，仓库里不留明文密码时用这个 */
+	passwordEnv?: string
+	/** 明文展示给访客的密码提示 */
+	passwordHint?: string
+	/** 构建时加密后的标记 */
+	encrypted?: boolean
+	/** 密文格式，ast = 加密的是构建期解析好的正文 */
+	encryptedFormat?: 'ast'
+	/** AES-256-GCM 密文（salt/iv/tag/data 均为 Base64） */
+	encryptedData?: { salt: string, iv: string, tag: string, data: string }
+
 	readingTime?: ReadTimeResults
 }
 
@@ -46,6 +59,18 @@ const articleSchema = z.object({
 	})).optional(),
 	draft: z.boolean().default(false),
 	permalink: z.string().optional(),
+
+	password: z.string().optional(),
+	passwordEnv: z.string().optional(),
+	passwordHint: z.string().optional(),
+	encrypted: z.boolean().default(false),
+	encryptedFormat: z.enum(['ast']).optional(),
+	encryptedData: z.object({
+		salt: z.string(),
+		iv: z.string(),
+		tag: z.string(),
+		data: z.string(),
+	}).optional(),
 
 	readingTime: z.object({
 		text: z.string(),

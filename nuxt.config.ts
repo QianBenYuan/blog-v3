@@ -8,6 +8,7 @@ import { Temporal } from 'temporal-polyfill'
 import blogConfig from './blog.config'
 import packageJson from './package.json'
 import redirectList from './redirects.json'
+import { applyContentEncryption, writeBackEncryptedFile } from './scripts/encrypt-content'
 
 function pluginPath(path: string) {
 	return pathToFileURL(resolve(`./remark-plugins/${path}.ts`)).href
@@ -87,11 +88,11 @@ export default defineNuxtConfig({
 	// @keep-sorted
 	routeRules: {
 		...mapValues(redirectList, to => ({ redirect: { to, statusCode: 308 as const } })),
+		'/**': { headers: { 'Referrer-Policy': 'no-referrer' } },
 		'/api/stats': { prerender: true, headers: { 'Content-Type': 'application/json' } },
 		'/atom.xml': { prerender: true, headers: { 'Content-Type': 'application/xml' } },
 		'/favicon.ico': { redirect: { to: blogConfig.favicon } },
 		'/subscriptions.opml': { prerender: true, headers: { 'Content-Type': 'application/xml' } },
-		'/**': { headers: { 'Referrer-Policy': 'no-referrer' } },
 	},
 
 	runtimeConfig: {
@@ -212,6 +213,12 @@ export default defineNuxtConfig({
 				ctx.content.path = permalink
 			else if (blogConfig.article.hidePostPrefix && path?.startsWith('/posts/'))
 				ctx.content.path = path.slice('/posts'.length)
+
+			// 正文加密必须放在最后：拿到的是完全解析好的正文
+			const encrypted = applyContentEncryption(ctx.content)
+			// 源文件加密模式：把加密结果写回 .md，推上公开仓库的源文件就不含明文和密码
+			if (process.env.ENCRYPT_BACKFILL && encrypted && ctx.file?.path)
+				writeBackEncryptedFile(ctx.file.path, ctx.content)
 		},
 	},
 

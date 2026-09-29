@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { DecryptedContent } from '~/composables/useDecryptContent'
+
 const route = useRoute()
 
 const { data: post } = await useAsyncData(
@@ -7,12 +9,24 @@ const { data: post } = await useAsyncData(
 )
 
 const excerpt = computed(() => post.value?.description || '')
+const locked = ref(!!post.value?.encrypted && !!post.value?.encryptedData)
+
 const asideWidgetNames = computed<WidgetName[]>(() => {
 	if (!post.value)
 		return ['blog-log']
 	return (post.value.meta?.aside as WidgetName[] | undefined) ?? ['toc']
 })
 const { widgets } = useWidgets(asideWidgetNames)
+
+/** 解密成功后把正文写回文章数据，目录/组件槽位/页脚随之恢复 */
+function onUnlock(content: DecryptedContent) {
+	const doc = post.value
+	if (!doc)
+		return
+	doc.body = content.body
+	doc.meta = { ...doc.meta, slots: content.slots ?? {} }
+	locked.value = false
+}
 
 if (post.value) {
 	useSeoMeta({
@@ -38,8 +52,19 @@ else {
 <template v-if="post">
 	<PostHeader v-bind="post" />
 	<PostExcerpt v-if="excerpt" :excerpt />
+	<!-- 加密文章先出密码门，解锁后把正文写回 post，再走正常渲染 -->
+	<PostEncrypted
+		v-if="locked && post.encryptedData"
+		class="article"
+		:class="getPostTypeClassName(post?.type, { prefix: 'md' })"
+		:payload="post.encryptedData"
+		:slug="post.path"
+		:hint="post.passwordHint"
+		@unlock="onUnlock"
+	/>
 	<!-- 使用 float-in 动画会导致搜索跳转不准确 -->
 	<ContentRenderer
+		v-else
 		class="article"
 		:class="getPostTypeClassName(post?.type, { prefix: 'md' })"
 		:value="post"
