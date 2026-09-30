@@ -13,6 +13,8 @@ tags:
 type: tech
 ---
 
+## [无法加载远程服务 ActiveX 控件]的解决办法
+
 用 WSL（Windows 子系统）时反复弹出这个框，关掉一个又冒一个，弹窗会越积越多：
 
 ![img](/assets/wslg-rdclientax-fix/popup-1.png)
