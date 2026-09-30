@@ -20,7 +20,7 @@ const selfFeed = {
 export default [
 	{
 		name: '影分身',
-		desc: '我自己搭建的个人博客，以及它的影分身。',
+		desc: '小圆不小心裂开了（ ’ - ’ * )',
 		entries: [
 			myFeed,
 			{
