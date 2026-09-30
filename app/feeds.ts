@@ -19,10 +19,22 @@ const selfFeed = {
 
 export default [
 	{
-		name: '我的博客',
-		desc: '我自己搭建的个人博客。',
+		name: '影分身',
+		desc: '我自己搭建的个人博客，以及它的影分身。',
 		entries: [
 			myFeed,
+			{
+				author: '千本圆',
+				sitenick: '摸鱼处',
+				title: '千本圆 - 博客园',
+				desc: '影分身：同一个人的博客园。',
+				link: 'https://www.cnblogs.com/qianbenyuan',
+				feed: 'https://www.cnblogs.com/qianbenyuan/rss',
+				icon: getFavicon('www.cnblogs.com'),
+				avatar: '/assets/avatar.jpg',
+				date: '2026-09-30',
+				comment: '影分身',
+			},
 		],
 	},
 	{
