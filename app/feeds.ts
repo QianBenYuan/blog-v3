@@ -68,4 +68,19 @@ export default [
 			},
 		],
 	},
+	{
+		name: '真诚致谢',
+		desc: '感谢这些博客一直以来的支持与帮助',
+		entries: [
+			{
+				author: '纸鹿',
+				title: '纸鹿摸鱼处',
+				desc: '折腾不止，摸鱼生活',
+				link: 'https://blog.zhilu.site/',
+				icon: getGithubIcon('L33Z22L11'),
+				avatar: getGithubAvatar('L33Z22L11'),
+				date: '2026-09-30',
+			},
+		],
+	},
 ] satisfies FeedGroup[]
