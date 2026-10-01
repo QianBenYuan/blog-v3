@@ -23,18 +23,6 @@ export default [
 		desc: '小圆不小心裂开了（ ’ - ’ * )',
 		entries: [
 			myFeed,
-			{
-				author: '千本圆',
-				sitenick: '摸鱼处',
-				title: '千本圆 - 博客园',
-				desc: '影分身：同一个人的博客园。',
-				link: 'https://www.cnblogs.com/qianbenyuan',
-				feed: 'https://www.cnblogs.com/qianbenyuan/rss',
-				icon: getFavicon('www.cnblogs.com'),
-				avatar: '/assets/avatar.jpg',
-				date: '2026-09-30',
-				comment: '影分身',
-			},
 		],
 	},
 	{
