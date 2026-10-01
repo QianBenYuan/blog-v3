@@ -1,0 +1,10 @@
+name = "twikoo-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# *.workers.dev is blocked in mainland China, so the Worker is only reachable
+# through this custom domain. The DNS record must be a proxied CNAME pointing
+# at twikoo-proxy.<workers-subdomain>.workers.dev.
+routes = [
+  { pattern = "twikoo.qianbenyuan.dpdns.org", zone_name = "qianbenyuan.dpdns.org" }
+]
