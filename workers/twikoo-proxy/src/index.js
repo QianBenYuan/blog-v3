@@ -26,6 +26,10 @@ const UPSTREAM = 'https://twikoo-nci.vercel.app/';
 // Events the real Twikoo client sends. Keep this list tight so the Worker
 // cannot be abused as an open proxy. Note the submit event is
 // COMMENT_SUBMIT — there is no COMMENT_ADD event in the client bundle.
+//
+// The ADMIN_* / *_FOR_ADMIN events are included so the dashboard at
+// `?admin` is reachable from China; they stay protected by the backend's
+// own ADMIN_PASSWORD, not by this list.
 const ALLOWED_EVENTS = new Set([
 	'GET_FUNC_VERSION',
 	'GET_CONFIG',
@@ -38,6 +42,20 @@ const ALLOWED_EVENTS = new Set([
 	'COMMENT_FORWARD',
 	'COUNTER_GET',
 	'PING',
+
+	// Admin dashboard (backend enforces ADMIN_PASSWORD).
+	'GET_PASSWORD_STATUS',
+	'ADMIN_LOGIN',
+	'ADMIN_CREDENTIALS',
+	'SET_PASSWORD',
+	'GET_CONFIG_FOR_ADMIN',
+	'SET_CONFIG',
+	'COMMENT_GET_FOR_ADMIN',
+	'COMMENT_SET_FOR_ADMIN',
+	'COMMENT_DELETE_FOR_ADMIN',
+	'COMMENT_EXPORT_FOR_ADMIN',
+	'COMMENT_IMPORT_FOR_ADMIN',
+	'COUNTER_GET_FOR_ADMIN',
 ]);
 
 const CORS_HEADERS = {
@@ -60,11 +78,21 @@ export default {
 			return new Response(null, { status: 204, headers: CORS_HEADERS });
 		}
 
+		// The Twikoo backend is a POST-only JSON API — it serves no HTML at
+		// all. A plain GET therefore returns 405, which is expected and not a
+		// fault. The admin dashboard is a client-side app, so nothing needs
+		// forwarding here; the message below just points people at the right
+		// entry point.
 		if (request.method !== 'POST') {
-			return new Response('Method Not Allowed', {
-				status: 405,
-				headers: { ...CORS_HEADERS, Allow: 'POST, OPTIONS' },
-			});
+			return new Response(
+				'Twikoo comment API (POST only).\n' +
+					'Dashboard: https://twikoo.qianbenyuan.dpdns.org/?admin\n' +
+					'Send POST JSON with an "event" field, e.g. {"event":"GET_FUNC_VERSION"}.',
+				{
+					status: 405,
+					headers: { ...CORS_HEADERS, Allow: 'POST, OPTIONS' },
+				},
+			);
 		}
 
 		let payload;

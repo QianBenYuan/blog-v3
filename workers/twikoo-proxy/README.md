@@ -78,3 +78,19 @@ curl https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/workers/subdomai
 - Reading comments and posting comments are independent code paths on the
   backend. Always verify both; a proxy can look fine while `COMMENT_SUBMIT`
   silently fails.
+
+## Expected behaviour that looks like a bug
+
+- `GET https://twikoo.qianbenyuan.dpdns.org/` returns **405**. The Twikoo
+  backend is a POST-only JSON API and serves no HTML at all, so a browser
+  hitting the root with GET always gets 405. This is correct.
+- The admin dashboard is a **client-side** app served by
+  `twikoo.all.min.js`; the backend has no `/admin` page. The entry point
+  is `https://twikoo.qianbenyuan.dpdns.org/?admin`.
+- Logging in to that dashboard does not work on the Vercel deployment.
+  `adminLogin` requires `config.CREDENTIALS`, and `isAdmin()` calls
+  CloudBase's `auth.getEndUserInfo()`, neither of which exists outside
+  CloudBase. `GET_PASSWORD_STATUS` therefore reports
+  `credentials: false`. Reading and writing comments work fine; only
+  admin operations are unavailable. Delete comments through the Vercel
+  dashboard while you still have a way to reach `*.vercel.app`.
