@@ -12,3 +12,9 @@ compatibility_date = "2026-10-01"
 routes = [
   { pattern = "twikoo.qianbenyuan.dpdns.org/*", zone_name = "qianbenyuan.dpdns.org" }
 ]
+
+# workers.dev is DNS-poisoned in mainland China (resolves into 157.240.x /
+# 67.228.x instead of Cloudflare space), so it is only an obstacle here:
+# keep it off rather than leaving a second, unreachable entry point.
+workers_dev = false
+preview_urls = false
