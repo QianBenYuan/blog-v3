@@ -5,6 +5,10 @@ compatibility_date = "2026-10-01"
 # *.workers.dev is blocked in mainland China, so the Worker is only reachable
 # through this custom domain. The DNS record must be a proxied CNAME pointing
 # at twikoo-proxy.<workers-subdomain>.workers.dev.
+# The "/*" suffix is mandatory. A pattern without it only matches the bare
+# hostname, so "/", "/healthz" and every API path fell through to the DNS
+# record's origin and came back as HTTP 522. Verified 2026-10-02 via
+# GET /accounts/<id>/workers/scripts -> routes[].pattern.
 routes = [
-  { pattern = "twikoo.qianbenyuan.dpdns.org", zone_name = "qianbenyuan.dpdns.org" }
+  { pattern = "twikoo.qianbenyuan.dpdns.org/*", zone_name = "qianbenyuan.dpdns.org" }
 ]
