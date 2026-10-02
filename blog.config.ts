@@ -90,7 +90,7 @@ const blogConfig = {
 		{ src: 'https://cdnjs.snrat.com/ajax/libs/twikoo/1.7.13/twikoo.min.js', defer: true },
 	],
 
-	/** 自己部署的 Twikoo 服务（自托管 tkserver + Cloudflare Tunnel） */
+	/** 自部署的 Twikoo 服务：Cloudflare Worker 反代到 twikoo-nci.vercel.app（后者国内被 DNS 污染 + TLS SNI 重置） */
 	twikoo: {
 		envId: 'https://twikoo.qianbenyuan.dpdns.org/',
 		preload: 'https://twikoo.qianbenyuan.dpdns.org/',
