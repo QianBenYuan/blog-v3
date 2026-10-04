@@ -42,7 +42,7 @@ export interface ArticleSchema {
 	/** 密文格式，ast = 加密的是构建期解析好的正文 */
 	encryptedFormat?: 'ast'
 	/** AES-256-GCM 密文（salt/iv/tag/data 均为 Base64） */
-	encryptedData?: { salt: string, iv: string, tag: string, data: string }
+	encryptedData?: { salt: string, iv: string, tag: string, data: string, v?: number, iter?: number }
 
 	readingTime?: ReadTimeResults
 }
@@ -77,6 +77,8 @@ const articleSchema = z.object({
 		iv: z.string(),
 		tag: z.string(),
 		data: z.string(),
+		v: z.number().optional(),
+		iter: z.number().optional(),
 	}).optional(),
 
 	readingTime: z.object({

@@ -8,7 +8,7 @@ import { Temporal } from 'temporal-polyfill'
 import blogConfig from './blog.config'
 import packageJson from './package.json'
 import redirectList from './redirects.json'
-import { applyContentEncryption, writeBackEncryptedFile } from './scripts/encrypt-content'
+import { applyContentEncryption, recordEncryptedArticle, removeEncryptedArticle, writeBackEncryptedFile } from './scripts/encrypt-content'
 
 function pluginPath(path: string) {
 	return pathToFileURL(resolve(`./remark-plugins/${path}.ts`)).href
@@ -216,9 +216,18 @@ export default defineNuxtConfig({
 
 			// 正文加密必须放在最后：拿到的是完全解析好的正文
 			const encrypted = applyContentEncryption(ctx.content, ctx.file?.body)
-			// 源文件加密模式：把加密结果写回 .md，推上公开仓库的源文件就不含明文和密码
-			if (env.ENCRYPT_BACKFILL && encrypted && ctx.file?.path)
-				writeBackEncryptedFile(ctx.file.path, ctx.content)
+			if (encrypted) {
+				// 登记明文特征串，供 scripts/check-build-leak.mjs 做产物泄漏自检
+				recordEncryptedArticle(ctx.content.path, ctx.file?.body ?? '')
+				// 源文件加密模式：把加密结果写回 .md，推上公开仓库的源文件就不含明文和密码
+				if (env.ENCRYPT_BACKFILL && ctx.file?.path)
+					writeBackEncryptedFile(ctx.file.path, ctx.content)
+			}
+			// 文章在产物里不再是密文形态（明文/到期已解锁）时清掉旧自检记录；
+			// 已写回的密文源文件走幂等跳过，仍带 encryptedData，保留记录
+			else if (ctx.content?.path && !(ctx.content as { encryptedData?: unknown }).encryptedData) {
+				removeEncryptedArticle(ctx.content.path)
+			}
 		},
 	},
 

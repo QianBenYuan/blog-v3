@@ -7,6 +7,10 @@ export interface EncryptedPayload {
 	iv: string
 	tag: string
 	data: string
+	/** 密文格式版本，缺省按 1 处理 */
+	v?: number
+	/** 本条密文的 PBKDF2 迭代次数，缺省按 600k 处理 */
+	iter?: number
 }
 
 export interface DecryptedContent {
@@ -14,7 +18,11 @@ export interface DecryptedContent {
 	slots: Record<string, MetaSlotsTree> | null
 }
 
-const PBKDF2_ITERATIONS = 100_000
+// 与 shared/utils/encryption.ts 保持一致（组合式函数按密文里的 iter 解密）
+const PBKDF2_ITERATIONS = 600_000
+const LEGACY_PBKDF2_ITERATIONS = 100_000
+const MIN_PBKDF2_ITERATIONS = 10_000
+const MAX_PBKDF2_ITERATIONS = 2_000_000
 const SALT_LENGTH = 16
 const IV_LENGTH = 12
 const TAG_LENGTH = 16
@@ -37,23 +45,35 @@ export async function decryptContent(payload: EncryptedPayload, password: string
 	if (salt.length !== SALT_LENGTH || iv.length !== IV_LENGTH || tag.length !== TAG_LENGTH)
 		throw new Error('密文格式损坏')
 
+	// 迭代次数随密文记录；公开密文可能被篡改参数，限制在合理区间防止 DoS
+	const iterations = payload.iter ?? PBKDF2_ITERATIONS
+	if (!Number.isInteger(iterations) || iterations < MIN_PBKDF2_ITERATIONS || iterations > MAX_PBKDF2_ITERATIONS)
+		throw new Error('密文参数异常')
+
 	const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey'])
-	const key = await crypto.subtle.deriveKey(
-		{ name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-		material,
-		{ name: 'AES-GCM', length: 256 },
-		false,
-		['decrypt'],
-	)
 
 	// GCM 的认证标签要拼在密文后面才能解
 	const ciphertext = new Uint8Array(data.length + tag.length)
 	ciphertext.set(data, 0)
 	ciphertext.set(tag, data.length)
 
+	function decryptWith(iterations: number) {
+		return crypto.subtle.deriveKey(
+			{ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+			material,
+			{ name: 'AES-GCM', length: 256 },
+			false,
+			['decrypt'],
+		)
+			.then(key => crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext))
+	}
+
+	// 旧版密文（v1 且无 iter 字段）按 600k 解密失败时回退 100k 再试一次
 	let plain: ArrayBuffer
 	try {
-		plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext)
+		plain = payload.iter == null
+			? await decryptWith(PBKDF2_ITERATIONS).catch(() => decryptWith(LEGACY_PBKDF2_ITERATIONS))
+			: await decryptWith(iterations)
 	}
 	catch {
 		throw new Error('解密失败：密码错误或内容已损坏')

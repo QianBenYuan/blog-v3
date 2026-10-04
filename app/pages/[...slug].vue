@@ -11,22 +11,28 @@ const { data: post } = await useAsyncData(
 const excerpt = computed(() => post.value?.description || '')
 const locked = ref(!!post.value?.encrypted && !!post.value?.encryptedData)
 
+/** 解密成功后把正文写回文章数据，目录/组件槽位随之恢复。
+ * 必须整体替换 post.value：asyncData 状态是浅响应式，嵌套赋值不会触发 toc 等依赖更新 */
+function onUnlock(content: DecryptedContent) {
+	const doc = post.value
+	if (!doc)
+		return
+	post.value = { ...doc, body: content.body, meta: { ...doc.meta, slots: content.slots ?? {} } }
+	locked.value = false
+}
+
+/** 重新上锁：清掉会话缓存的密码，回到密码门（缓存键用 post.path，与写入端一致） */
+function relock() {
+	clearCachedPassword(post.value?.path ?? route.path)
+	locked.value = true
+}
+
 const asideWidgetNames = computed<WidgetName[]>(() => {
 	if (!post.value)
 		return ['blog-log']
 	return (post.value.meta?.aside as WidgetName[] | undefined) ?? ['toc']
 })
 const { widgets } = useWidgets(asideWidgetNames)
-
-/** 解密成功后把正文写回文章数据，目录/组件槽位/页脚随之恢复 */
-function onUnlock(content: DecryptedContent) {
-	const doc = post.value
-	if (!doc)
-		return
-	doc.body = content.body
-	doc.meta = { ...doc.meta, slots: content.slots ?? {} }
-	locked.value = false
-}
 
 if (post.value) {
 	useSeoMeta({
@@ -71,6 +77,13 @@ else {
 		tag="article"
 	/>
 
+	<p v-if="post.encryptedData && !locked" class="article-relock">
+		<button type="button" @click="relock">
+			<Icon name="tabler:lock" />
+			重新加密
+		</button>
+	</p>
+
 	<PostFooter v-bind="post" />
 	<PostSurround />
 	<PostComment />
@@ -82,3 +95,29 @@ else {
 	title="内容为空或页面不存在"
 />
 </template>
+
+<style lang="scss" scoped>
+.article-relock {
+	text-align: center;
+
+	button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3em;
+		padding: 0.3em 0.9em;
+		border: 1px solid var(--c-bg-soft);
+		border-radius: 999px;
+		background-color: transparent;
+		font: inherit;
+		font-size: 0.85em;
+		color: var(--c-text-2);
+		transition: color 0.2s, border-color 0.2s;
+		cursor: pointer;
+
+		&:hover {
+			border-color: var(--c-primary);
+			color: var(--c-primary);
+		}
+	}
+}
+</style>
