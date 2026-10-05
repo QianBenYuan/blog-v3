@@ -46,6 +46,8 @@ interface UseCategoryOptions {
 export function useCategory(list: MaybeRefOrGetter<ArticleProps[]>, options?: UseCategoryOptions) {
 	const { bindQuery } = options || {}
 
+	const appConfig = useAppConfig()
+
 	const category = bindQuery
 		? useRouteQuery(bindQuery, undefined)
 		: ref<string | undefined>()
@@ -60,7 +62,6 @@ export function useCategory(list: MaybeRefOrGetter<ArticleProps[]>, options?: Us
 			path.forEach((name, depth) => {
 				let option = index.get(name)
 				if (!option) {
-					// 顺序沿用原来的「首次出现」行为
 					option = { value: name, depth, parent: path[depth - 1], posts: 0 }
 					index.set(name, option)
 					options.push(option)
@@ -70,7 +71,18 @@ export function useCategory(list: MaybeRefOrGetter<ArticleProps[]>, options?: Us
 			})
 		}
 
-		return options
+		// 按配置的分类树排序：子分类紧跟父分类（比赛 → moectf / 0xGame2026-w1），
+		// 否则按「首次出现」排序会让子分类飘到别的顶层分类后面，视觉上像挂错了地方
+		const tree = appConfig.article.categories as Record<string, { children?: Record<string, unknown> }>
+		const rank = new Map<string, number>()
+		let rankIndex = 0
+		for (const [name, def] of Object.entries(tree)) {
+			rank.set(name, rankIndex++)
+			for (const child of Object.keys(def?.children ?? {}))
+				rank.set(child, rankIndex++)
+		}
+		const fallback = Number.MAX_SAFE_INTEGER
+		return options.sort((a, b) => (rank.get(a.value) ?? fallback) - (rank.get(b.value) ?? fallback))
 	})
 
 	// 只要路径里含有该分类就算命中，所以选父分类会连子分类的文章一起带出来
