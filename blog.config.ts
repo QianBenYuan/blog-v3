@@ -47,7 +47,8 @@ const blogConfig = {
 				color: '#f0a020',
 				/** 子分类：显示为「比赛 · moectf」；省略 icon/color 时自动继承父级 */
 				children: {
-					moectf: {},
+					'moectf': {},
+					'0xGame2026-w1': {},
 				},
 			},
 			/** 思考：观点讨论/复盘反思/行业或产品观察 */
