@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Icon } from '#components'
 import { merge } from 'es-toolkit/object'
 import { packageManager, version } from '~~/package.json'
 import pnpmWorkspace from '~~/pnpm-workspace.yaml'
+import { Icon } from '#components'
 
 const appConfig = useAppConfig()
 const { public: { arch, ci, nodeVersion, platform } } = useRuntimeConfig()
@@ -47,7 +47,7 @@ const expand = ref(false)
 
 <template>
 <BlogWidget card grayscale title="技术信息">
-	<ZDlGroup :items="service" />
+	<ZDlGroup class="service-dl" size="large" :items="service" />
 	<ZExpand v-model="expand" in-place name="构建信息">
 		<ZDlGroup size="small" :items="techstack" />
 	</ZExpand>
@@ -62,5 +62,17 @@ const expand = ref(false)
 .dl-group :deep(img) {
 	height: 1.2em;
 	vertical-align: sub;
+}
+
+/* 每项一行：label 左、value 右两端对齐，替代默认的上下堆叠 */
+.service-dl :deep(div) {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 0.8em;
+
+	> dt {
+		flex-shrink: 0;
+	}
 }
 </style>
