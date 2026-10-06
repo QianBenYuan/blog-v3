@@ -1,17 +1,27 @@
 <script setup lang="ts">
-const { timeEstablished } = useAppConfig()
+import { UtilLink } from '#components'
 
-const blogLog = [
-	{ label: '2025-07-26', value: '重构到 Nuxt 4 + Nuxt Content v3，启用 zhilu.site 域名' },
-	{ label: '2024-08-11', value: '重构到 Nuxt 3 + Nuxt Content v2' },
-	{ label: '2023-05-24', value: '更换框架为 Hexo，升级博客' },
-	{ label: '2020-08-24', value: '使用 zhilu.cyou 域名' },
-	{ label: timeEstablished, value: '发布第一篇文章' },
-]
+interface PostBrief { path: string, title?: string, updated?: string, date?: string }
+
+/** 最近更新的文章（有 updated 用 updated，否则按发布日期） */
+const { data: posts } = await useAsyncData('widget:post-updates', () =>
+	queryCollection('content')
+		.where('stem', 'LIKE', 'posts/%')
+		.select('path', 'title', 'updated', 'date')
+		.all() as Promise<PostBrief[]>)
+
+const items = computed(() => (posts.value ?? [])
+	.slice()
+	.sort((a, b) => Date.parse(b.updated || b.date || '0') - Date.parse(a.updated || a.date || '0'))
+	.slice(0, 8)
+	.map(post => ({
+		label: post.updated || post.date || '',
+		value: () => h(UtilLink, { to: post.path }, () => post.title ?? post.path),
+	})))
 </script>
 
 <template>
-<BlogWidget card title="更新日志">
-	<ZDlGroup size="large" :items="blogLog" />
+<BlogWidget card title="文章更新">
+	<ZDlGroup size="large" :items="items" />
 </BlogWidget>
 </template>
