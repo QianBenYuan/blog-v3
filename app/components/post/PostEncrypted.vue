@@ -5,6 +5,7 @@ const props = defineProps<{
 	payload: EncryptedPayload
 	slug: string
 	hint?: string
+	note?: string
 }>()
 
 const emit = defineEmits<{ unlock: [content: DecryptedContent] }>()
@@ -60,6 +61,9 @@ onMounted(() => {
 			<Icon name="tabler:bulb" />
 			提示：{{ hint }}
 		</p>
+		<blockquote v-if="note" class="gate-note">
+			{{ note }}
+		</blockquote>
 
 		<form class="gate-form" @submit.prevent="onSubmit">
 			<input
@@ -122,6 +126,16 @@ onMounted(() => {
 
 .gate-desc, .gate-hint, .gate-footer, .gate-error {
 	margin: 0;
+	font-size: 0.9em;
+	color: var(--c-text-2);
+}
+
+.gate-note {
+	max-width: 24em;
+	margin: 0;
+	padding: 0.4em 1em;
+	border-inline-start: 3px solid var(--c-primary);
+	background-color: var(--c-bg-2);
 	font-size: 0.9em;
 	color: var(--c-text-2);
 }

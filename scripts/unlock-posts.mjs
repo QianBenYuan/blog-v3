@@ -119,6 +119,7 @@ function filterFrontmatter(fm, permanentlyPublic) {
 	if (permanentlyPublic) {
 		drop.add('passwordEnv')
 		drop.add('passwordHint')
+		drop.add('passwordNote')
 	}
 	const kept = []
 	let dropping = false

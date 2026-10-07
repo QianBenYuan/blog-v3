@@ -20,6 +20,7 @@ export interface EncryptableDocument {
 	password?: string
 	passwordEnv?: string
 	passwordHint?: string
+	passwordNote?: string
 	unlockAt?: string
 	encrypted?: boolean
 	encryptedFormat?: 'ast'

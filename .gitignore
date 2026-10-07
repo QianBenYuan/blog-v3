@@ -26,3 +26,5 @@ logs
 # Custom
 .vercel
 content/posts/test.md
+# Local AI tool settings
+.claude

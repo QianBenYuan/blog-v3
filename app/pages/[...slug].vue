@@ -66,6 +66,7 @@ else {
 		:payload="post.encryptedData"
 		:slug="post.path"
 		:hint="post.passwordHint"
+		:note="post.passwordNote"
 		@unlock="onUnlock"
 	/>
 	<!-- 使用 float-in 动画会导致搜索跳转不准确 -->
