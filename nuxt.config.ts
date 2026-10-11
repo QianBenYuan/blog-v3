@@ -44,7 +44,14 @@ export default defineNuxtConfig({
 				separator: '|',
 			},
 			titleTemplate: `%s %separator ${blogConfig.title}`,
-			script: blogConfig.scripts,
+			script: [
+				{
+					// 进站加载动画（BootLoader.client.vue）：首帧前决定是否播放，防止正文闪烁；
+					// ?replay=1 强制重播；8 秒兜底，组件 JS 挂掉也能看到正文
+					innerHTML: `(function(){try{if(location.search.indexOf('replay')>-1)sessionStorage.removeItem('qby-splash-complete');if(sessionStorage.getItem('qby-splash-complete')!=='true'){document.documentElement.classList.add('splash-running');setTimeout(function(){var d=document.documentElement;d.classList.add('splash-fade');setTimeout(function(){d.classList.remove('splash-running','splash-fade')},650)},8e3)}}catch(e){}})();`,
+				},
+				...blogConfig.scripts,
+			],
 		},
 		rootAttrs: {
 			id: 'blog-root',
@@ -61,6 +68,7 @@ export default defineNuxtConfig({
 	css: [
 		'@/assets/css/animation.scss',
 		'@/assets/css/article.scss',
+		'@/assets/css/boot-loader.scss',
 		'@/assets/css/color.scss',
 		'@/assets/css/font.scss',
 		'@/assets/css/main.scss',
