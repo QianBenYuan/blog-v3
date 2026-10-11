@@ -4,7 +4,7 @@
  * 是否播放由 nuxt.config head 里的内联脚本决定（给 <html> 加 splash-running，一次会话只播一次），
  * 本组件只负责把舞台挂到 DOM、播放并收尾；点击 / Enter / Esc / 空格可跳过。
  */
-const LOGO = 'QBY'
+const LOGO = '千本圆'
 const POSTER = '/assets/boot-loader/moe-poster.jpg'
 const VIDEO = '/assets/boot-loader/moe-crop.mp4'
 
