@@ -26,10 +26,10 @@ jobs:
           fi
           exit "$status"
         env:
-          # 每个 passwordEnv 变量名都需要对应一个同名仓库 Secret。
-          # 例：文章 frontmatter 写 passwordEnv: "MOECTF_PW"，
-          #     就去仓库 Settings → Secrets and variables → Actions 建 MOECTF_PW = 密码。
-          MOECTF_PW: ${{ secrets.MOECTF_PW }}
+          # 文章 frontmatter 里 passwordEnv: "MOECTF_PW"，
+          # 对应仓库 Secret 为 MOECTF_FLAG（值 = 解锁密码）。
+          # 每新增一个 passwordEnv 变量名，都需要在这里加一行映射。
+          MOECTF_PW: ${{ secrets.MOECTF_FLAG }}
 
       - name: 有改动则提交推送（触发 Vercel 重新构建）
         env:
