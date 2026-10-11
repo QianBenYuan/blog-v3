@@ -4,7 +4,7 @@ const basicConfig = {
 	title: '千本圆',
 	subtitle: '千本圆',
 	// 长 description 利好于 SEO
-	description: '千本圆',
+	description: '圆圆Weber的升级打怪日常꒰ *•ɷ•* ꒱',
 	author: {
 		name: '千本圆',
 		avatar: '/assets/avatar.jpg',
@@ -41,6 +41,8 @@ const blogConfig = {
 			开发: { icon: 'tabler:code', color: '#7777ff' },
 			/** 安全：漏洞/CTF/恶意软件/安全事件分析 */
 			安全: { icon: 'tabler:bug', color: '#ff7733' },
+			/** 技术：组件用法/主题文档/技术参考 */
+			技术: { icon: 'tabler:cpu', color: '#3b9eff' },
 			/** 比赛：CTF 竞赛/比赛题解 */
 			比赛: {
 				icon: 'tabler:trophy',

@@ -1,10 +1,11 @@
 ---
 title: 组件样式示例
 description: Clarity 主题全部内容组件的用法与效果演示：MDC 语法、Alert / Badge / LinkBanner / Pic / Timeline 等组件，以及本站补充的 Typora 写作流程与图片跳转实战。
+image: /assets/姐姐.jpg
 date: 2024-09-21 23:18:18
 updated: 2026-10-11
 categories:
-  - 杂谈
+  - 技术
 tags:
   - Nuxt
   - 博客
