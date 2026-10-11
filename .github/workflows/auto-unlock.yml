@@ -17,7 +17,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 解密到期文章并重写为明文
-        run: node scripts/unlock-posts.mjs
+        run: |
+          node scripts/unlock-posts.mjs 2>&1 | tee /tmp/unlock.log
+          status=${PIPESTATUS[0]}
+          # 失败时把脚本的关键输出转成 error annotation（匿名可见，便于排查）
+          if [ "$status" -ne 0 ]; then
+            grep '\[unlock-posts\]' /tmp/unlock.log | tail -6 | sed 's/^/::error::/' || true
+          fi
+          exit "$status"
         env:
           # 每个 passwordEnv 变量名都需要对应一个同名仓库 Secret。
           # 例：文章 frontmatter 写 passwordEnv: "MOECTF_PW"，
