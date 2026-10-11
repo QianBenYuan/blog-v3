@@ -188,3 +188,7 @@ for (const file of walk(CONTENT_DIR)) {
 }
 
 console.log(`[unlock-posts] done: 解锁 ${changed} 篇，跳过 ${skipped} 篇`)
+
+// CI（默认）模式下，到期文章因缺密码/密码错误被跳过 = 配置问题，让 workflow 显式失败暴露它
+if (!RESTORE_ALL && skipped > 0)
+	process.exit(1)
