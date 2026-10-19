@@ -1,6 +1,6 @@
 ---
 title: "小圆的博客改造日记"
-description: "小圆的秘密，不给看，除非你来找我要～(￣▽￣～)~"
+description: "小圆的博客改造复盘：Typora 的 ==高亮== 为什么没渲染、给「比赛」加 moectf 子分类、行尾校验该关还是该改、git push 被 reset 后改走 SSH——重点记每一步怎么把范围缩小。"
 image: /assets/西幻，黑暗.jpg
 date: 2026-09-13
 updated: 2026-10-11

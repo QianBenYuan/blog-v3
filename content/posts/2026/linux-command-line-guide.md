@@ -1,6 +1,6 @@
 ---
 title: "Linux 系统命令行入门实操笔记（Ubuntu 适配）"
-description: "从零开始的 Linux 命令行操作指南，涵盖开关机、文件目录操作、文件查看、查找压缩等实用命令，适配 Ubuntu 系统。"
+description: "Linux 命令行入门实操笔记（Ubuntu）：开关机与登录、目录文件操作、查看与查找、zip/tar 压缩解压。"
 image: /assets/end-of-world-aiin.jpg
 date: 2026-07-23
 categories:

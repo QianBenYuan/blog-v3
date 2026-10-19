@@ -1,6 +1,6 @@
 ---
 title: "河湖小盗：SQL 注入（SQL Injection）"
-description: "CTF SQL 注入题目「河湖小盗」解题过程：从 POST 表单的 id 参数入手，用 1' 与 OR 1=1 确认数字型注入，再以 UNION 注入探出 3 个回显位和 MySQL 版本，经 information_schema 查出表名、列名，最终从 flag_table 取出 flag。附注入原理、数据库识别、黑名单绕过思路与 payload 速查表。"
+description: "MoeCTF「河湖小盗」SQL 注入题解"
 image: /assets/羽毛，雨水，莫弈.jpg
 date: 2026-09-13
 categories:

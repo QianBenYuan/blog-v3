@@ -1,6 +1,6 @@
 ---
 title: "错位的签名：JWT 算法混淆"
-description: "0xGame 2026 第一周 Web 题「错位的签名」解题报告：APISIX 网关 JWT 鉴权被 alg 头牵着走，RS256 → HS256 算法混淆，拿公开公钥当 HMAC 密钥伪造 admin token。含 JWT 基础、状态码排查表、通用检查清单与最短复现路径。"
+description: "0xGame 2026「错位的签名」：APISIX 网关按 token 里的 alg 验签，把 RS256 降级成 HS256，用公开公钥当 HMAC 密钥伪造 admin token。"
 image: /assets/可爱捏，girl.jpg
 date: 2026-10-05
 categories:

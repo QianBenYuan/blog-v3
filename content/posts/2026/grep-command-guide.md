@@ -1,6 +1,6 @@
 ---
 title: "grep 命令用法"
-description: "Linux 命令 grep 的小白学习笔记：一行一行按条件找、常用参数、配合管道过滤、正则提取 flag，附 CTF 实战用法与一页速查。"
+description: "grep 学习笔记：按行搜索、常用参数、配合管道过滤命令输出、用正则提取 flag。"
 image: /assets/钢琴，花，莫弈.jpg
 date: 2026-09-15
 updated: 2026-10-05

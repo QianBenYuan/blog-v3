@@ -1,6 +1,6 @@
 ---
 title: "给博客加上文章加密与到期自动解锁（Nuxt Content）"
-description: "复刻 HACKED 的文章加密方案，并加了源文件密文入库（ENCRYPT_BACKFILL 写回）、unlockAt 到期自动解锁（GitHub Actions 定时转明文）、markdown 原文入密；本次更新：PBKDF2 提到 600k 且参数随密文版本化、产物泄漏自检、本地一键恢复明文的编辑闭环、dev 明文直显、弱密码检查。附全部代码，拿去就能用。"
+description: "给 Nuxt Content 博客加上文章加密与到期自动解锁：PBKDF2-SHA256 + AES-256-GCM、源文件密文入库、unlockAt 到期由 GitHub Actions 自动转明文，附完整代码与本地编辑闭环。"
 image: /assets/对镜相视，莫伊.jpg
 date: 2026-09-29
 updated: 2026-10-04

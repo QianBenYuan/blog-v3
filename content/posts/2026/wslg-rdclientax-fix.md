@@ -1,6 +1,6 @@
 ---
 title: "[无法加载远程服务 ActiveX 控件]的解决办法"
-description: "Windows 10 上使用 WSL 时反复弹出「无法加载远程服务 ActiveX 控件，请确保 rdclientax.dll 在路径中」的彻底解决办法：根因是 WSLg 的 rdclientax.dll 依赖 Windows 11 才有的 GetTempPath2W，通过关闭 WSLg 图形界面解决。"
+description: "Windows 10 用 WSL 反复弹「无法加载远程服务 ActiveX 控件」的根治方法：WSLg 的 rdclientax.dll 依赖 Win11 才有的 GetTempPath2W，改 .wslconfig 关掉 WSLg 即可。"
 image: /assets/双手莫弈.jpg
 date: 2026-09-30
 categories:

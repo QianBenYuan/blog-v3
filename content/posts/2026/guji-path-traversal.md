@@ -1,6 +1,6 @@
 ---
 title: "古籍翻阅：路径穿越（Path Traversal）"
-description: "CTF 路径穿越（Path Traversal）题目「古籍翻阅」解题思路：从 1000 本古籍目录中 diff 出隐藏入口 true_file，访问拿到提示后用多层 ../../ 穿越书架目录，最终读取根目录 flag。"
+description: "MoeCTF「古籍翻阅」路径穿越题解"
 image: /assets/猫猫人参.jpg
 date: 2026-09-08
 categories:

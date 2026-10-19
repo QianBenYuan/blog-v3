@@ -1,6 +1,6 @@
 ---
 title: "CTF Web 选手工具箱：环境搭建与实战指南"
-description: "整理 CTF Web 方向所需的环境工具，介绍每种工具的作用、下载方式和基本使用方法，涵盖 Python、Node.js、PHP 等基础运行环境，以及 dirsearch、sqlmap、xsstrike 等 Web 渗透工具。"
+description: "CTF Web 环境搭建与实战：Python、Node.js、PHP、MySQL 基础环境，dirsearch、sqlmap、XSStrike、commix、nmap 等渗透工具的安装与用法，附靶场和 PATH 配置。"
 image: /assets/西环莫伊.jpg
 date: 2026-08-23
 categories:
