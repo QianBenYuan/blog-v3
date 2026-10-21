@@ -69,6 +69,20 @@ export default [
 		],
 	},
 	{
+		name: 'web大手子',
+		desc: '汇集Web各路大佬(★ω★)',
+		entries: [
+			{
+				author: 'Doomer82',
+				title: 'Doomer82',
+				link: 'https://blog.csdn.net/Doomer82',
+				icon: getFavicon('blog.csdn.net'),
+				avatar: '/assets/web大手子.jpg',
+				date: '2026-10-21',
+			},
+		],
+	},
+	{
 		name: '真诚致谢',
 		desc: '感谢这些博客一直以来的支持与帮助',
 		entries: [
