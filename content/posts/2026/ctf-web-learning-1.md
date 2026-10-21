@@ -37,9 +37,14 @@ type: tech
 #### 1. IP、域名、DNS 与 URL
 
 - **域名**：给人看的好记名字，例如 `baidu.com`。
-- **DNS（Domain Name System，域名系统）**：把域名翻译成对应的公网 IP 地址。
-- **IP 地址**：网络设备的编号，用来在互联网上定位一台机器，分为内网 IP 和公网 IP。
-- **URL（统一资源定位符）**：完整的网页地址，包含协议、域名、路径、参数，用来定位网页资源。
+- **DNS（Domain Name System，域名系统）**：把域名翻译成对应的公网 IP 地址。例：查询 `www.baidu.com`，DNS 返回百度服务器 IP `110.242.68.66`这一串数字。
+- **IP 地址**：网络设备的数字编号，是网络通信真正用来定位机器的地址，分**内网 IP（局域网内使用，如电脑、虚拟机地址）**和**公网 IP（互联网上唯一标识，百度服务器的 IP 就是公网 IP）**。
+- **URL（统一资源定位符）**：完整网页地址，用来精准定位互联网上某一份资源，包含**协议 + 域名 + 路径 + 参数**。
+	例：`https://www.baidu.com/s?wd=ctf`
+	- `https`：协议
+	- `www.baidu.com`：域名
+	- `/s`：资源路径
+	- `?wd=ctf`：查询参数（代表搜索关键词 ctf）
 
 > 简单区分：域名只是名字；URL 是完整访问地址；DNS 负责把域名翻译成 IP。
 
@@ -48,6 +53,7 @@ type: tech
 banner: /assets/小黑.jpg
 title: MoeCTF 2026 Web安全与渗透测试
 description: 可以结合这个文章里的“3.归途”进行食用
+
 link: "https://blog.qianbenyuan.dpdns.org/2026/moectf-2026-web-pentest"
 ---
 ::
@@ -116,7 +122,6 @@ link: "https://blog.qianbenyuan.dpdns.org/2026/moectf-2026-web-pentest"
 **VDS（Virtual Dedicated Server，虚拟独立服务器）**
 
 - 硬件资源完全隔离独享，不会资源超售，性能稳定，价格高于 VPS。
-- CTF 练习一般不需要。
 
 **内网穿透工具**
 
