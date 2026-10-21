@@ -26,7 +26,7 @@ export default [
 		],
 	},
 	{
-		name: '校友',
+		name: '友链',
 		desc: '校友GUSEST',
 		entries: [
 			selfFeed,
