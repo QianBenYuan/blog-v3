@@ -10,38 +10,57 @@ on:
 permissions:
   contents: write
 
+# 避免上一次定时任务还没跑完又起来一个，两个进程同时改 content 会撞车
+concurrency:
+  group: auto-unlock
+  cancel-in-progress: false
+
 jobs:
   unlock:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 定时任务触发时默认只拉一个提交，push 前需要完整历史才能判断是否落后
+          fetch-depth: 0
 
       - name: 解密到期文章并重写为明文
         run: |
+          set -o pipefail
           node scripts/unlock-posts.mjs 2>&1 | tee /tmp/unlock.log
-          status=${PIPESTATUS[0]}
+          status=$?
           # 失败时把脚本的关键输出转成 error annotation（匿名可见，便于排查）
           if [ "$status" -ne 0 ]; then
             grep '\[unlock-posts\]' /tmp/unlock.log | tail -6 | sed 's/^/::error::/' || true
           fi
           exit "$status"
         env:
-          # 文章 frontmatter 里 passwordEnv: "MOECTF_PW"，
-          # 对应仓库 Secret 为 MOECTF_FLAG（值 = 解锁密码）。
-          # 每新增一个 passwordEnv 变量名，都需要在这里加一行映射。
+          # 文章 frontmatter 里 passwordEnv 指定用哪个环境变量，
+          # 这里负责把「仓库 Secret」映射成脚本认识的变量名。
+          # 每新增一个 passwordEnv 变量名，都要在这里加一行映射，否则该文章会因缺密码被跳过（进而让本任务失败）。
+          #   passwordEnv: "MOECTF_PW"   → Secret MOECTF_FLAG
+          #   passwordEnv: "BLOG_DEV_PW" → Secret BLOG_DEV_PW
           MOECTF_PW: ${{ secrets.MOECTF_FLAG }}
+          BLOG_DEV_PW: ${{ secrets.BLOG_DEV_PW }}
 
-      - name: 有改动则提交推送（触发 Vercel 重新构建）
+      - name: 有改动则提交推送（触发 Cloudflare Workers 重新构建）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "auto-unlock bot"
-            git config user.email "auto-unlock@users.noreply.github.com"
-            git add content
-            git commit -m "chore: 加密文章到期自动解锁"
-            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
-            echo "已推送解锁提交"
-          else
+          if [ -z "$(git status --porcelain)" ]; then
             echo "没有到期待解锁的文章"
+            exit 0
           fi
+          git config user.name "auto-unlock bot"
+          git config user.email "auto-unlock@users.noreply.github.com"
+          # 只提交 content 下的文章改动，别把构建产物或临时文件带进去
+          git add content
+          if git diff --cached --quiet; then
+            echo "content 无实质改动（可能只是文件权限/mtime 变化），跳过提交"
+            exit 0
+          fi
+          git commit -m "chore: 加密文章到期自动解锁"
+          # 定时任务执行期间主分支可能已被别的提交推走，先 rebase 再推，避免 non-fast-forward 失败
+          git pull --rebase --autostash origin main
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+          echo "已推送解锁提交"
