@@ -1,5 +1,5 @@
 ---
-title: "WEB入门题"
+title: "WBE入门题"
 description: "一些WEB入门题"
 image: "/assets/web-rumen/cover.jpg"
 date: 2026-10-22
