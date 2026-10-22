@@ -1,6 +1,6 @@
 ---
 title: "小圆的工具"
-description: "小圆的 CTF 工具箱完全索引：工具清单与用途速查，涵盖抓包、Web 渗透、逆向、取证与密码学，附环境速览、目录地图和备份清单。"
+description: "小圆的工具指南"
 image: /assets/私奔了.jpg
 date: 2026-10-07
 categories:
