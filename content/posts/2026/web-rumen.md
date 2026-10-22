@@ -1,6 +1,6 @@
 ---
 title: "WEB入门题"
-description: "ctfshow 的 WEB 入门题题解：robots.txt、phps 泄露、www.zip、.git/.svn、vim 交换文件、Cookie、DNS TXT 记录等信息泄露套路。"
+description: "一些WEB入门题"
 image: "/assets/web-rumen/cover.jpg"
 date: 2026-10-22
 categories:
