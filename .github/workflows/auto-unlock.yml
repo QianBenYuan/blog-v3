@@ -40,8 +40,10 @@ jobs:
           # 每新增一个 passwordEnv 变量名，都要在这里加一行映射，否则该文章会因缺密码被跳过（进而让本任务失败）。
           #   passwordEnv: "MOECTF_PW"   → Secret MOECTF_FLAG
           #   passwordEnv: "BLOG_DEV_PW" → Secret BLOG_DEV_PW
+          #   passwordEnv: "TOOL_PW"     → Secret TOOL_PW
           MOECTF_PW: ${{ secrets.MOECTF_FLAG }}
           BLOG_DEV_PW: ${{ secrets.BLOG_DEV_PW }}
+          TOOL_PW: ${{ secrets.TOOL_PW }}
 
       - name: 有改动则提交推送（触发 Cloudflare Workers 重新构建）
         env:
