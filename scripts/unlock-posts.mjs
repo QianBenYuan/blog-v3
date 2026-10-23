@@ -84,7 +84,7 @@ function parseEncryptedData(fm) {
 		// 离开缩进块即结束
 		if (!/^[ \t]/.test(line))
 			break
-		const kv = line.match(/^[ \t]+(salt|iv|tag|data|v|iter):(.*)$/)
+		const kv = line.match(/^[ \t]+(salt|iv|tag|data|v|iter):(.*?)\r?$/)
 		if (!kv)
 			continue
 		let value = kv[2].trim().replace(/(^|\s)#.*$/, '')
