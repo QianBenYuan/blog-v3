@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # 依赖漏洞自动提 PR（Nuxt/Node 生态更新快，供应链风险主要在这里）
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

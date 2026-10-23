@@ -96,7 +96,16 @@ export default defineNuxtConfig({
 	// @keep-sorted
 	routeRules: {
 		...mapValues(redirectList, to => ({ redirect: { to, statusCode: 308 as const } })),
-		'/**': { headers: { 'Referrer-Policy': 'no-referrer' } },
+		// 基线安全响应头（源站层；Worker 层也有一份，双保险）
+		'/**': {
+			headers: {
+				'Referrer-Policy': 'no-referrer',
+				'X-Content-Type-Options': 'nosniff',
+				'X-Frame-Options': 'SAMEORIGIN',
+				'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+				'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+			},
+		},
 		'/api/stats': { prerender: true, headers: { 'Content-Type': 'application/json' } },
 		'/atom.xml': { prerender: true, headers: { 'Content-Type': 'application/xml' } },
 		'/favicon.ico': { redirect: { to: blogConfig.favicon } },
