@@ -218,7 +218,12 @@ export function applyContentEncryption(rawDoc: unknown, rawBody = ''): boolean {
 				}
 				catch {
 					// 密码不对/内容损坏：保持密文（优雅降级，不阻断构建）
+					recordCipherArticle(doc.path, doc.passwordEnv)
 				}
+			}
+			else {
+				// 保持密文但口令变量名同样不得进产物，且要登记进自检清单
+				recordCipherArticle(doc.path, doc.passwordEnv)
 			}
 		}
 		stripSecretFields(doc)
@@ -235,8 +240,12 @@ export function applyContentEncryption(rawDoc: unknown, rawBody = ''): boolean {
 					restoreDecryptedBody(doc, doc.encryptedData, password)
 				}
 				catch {
+					recordCipherArticle(doc.path, doc.passwordEnv)
 					return false
 				}
+			}
+			else {
+				recordCipherArticle(doc.path, doc.passwordEnv)
 			}
 			return false
 		}
@@ -245,15 +254,30 @@ export function applyContentEncryption(rawDoc: unknown, rawBody = ''): boolean {
 		return false
 	}
 
-	// 幂等：写回过的密文源文件直接跳过
-	if (doc.encrypted || doc.encryptedData)
+	// 幂等：写回过的密文源文件直接跳过。跳过前仍要：
+	// 1) 把 password/passwordEnv 从产物文档里删掉（曾在此处泄漏 Secret 名→文章映射）
+	// 2) 登记口令变量名进自检清单（否则 CI 全新环境下 check-build-leak 对密文源文件完全失明）
+	if (doc.encrypted || doc.encryptedData) {
+		recordCipherArticle(doc.path, doc.passwordEnv)
+		stripSecretFields(doc)
 		return false
+	}
 
 	const password = tryResolvePassword(doc)
 	if (!password) {
 		// 没有可用密码（password 字段为空等）：按普通文章处理，但密码字段不得进产物
 		stripSecretFields(doc)
 		return false
+	}
+
+	// 防手滑：unlockAt 已经是过去时间还来加密，多半是日期笔误——密文一入库，
+	// auto-unlock 定时任务下一轮就会把它自动公开（历史上真实发生过）。
+	// 确实要立即公开应直接发布明文；确需跳过本检查设 ALLOW_PAST_UNLOCK_AT=1
+	if (doc.unlockAt && !process.env.ALLOW_PAST_UNLOCK_AT) {
+		const due = parseUnlockAt(doc.unlockAt)
+		if (due < Date.now()) {
+			throw new Error(`[encrypt-content] 「${doc.title || doc.path || ''}」的 unlockAt（${doc.unlockAt}）已是过去时间，加密后会被定时任务立即解锁公开。若是日期笔误请改正；若确要立即公开请直接发布明文，或设 ALLOW_PAST_UNLOCK_AT=1 跳过本检查`)
+		}
 	}
 
 	checkPasswordStrength(password, doc.passwordHint, doc.title || doc.path || '未知文章')
@@ -271,6 +295,10 @@ export function applyContentEncryption(rawDoc: unknown, rawBody = ''): boolean {
 	doc.body = placeholderBody(doc.passwordHint)
 	if (doc.meta)
 		doc.meta.slots = {}
+
+	// 口令字段剥离前先提取自检信息（明文特征串 + 口令变量名）
+	if (doc.path)
+		recordEncryptedArticle(doc.path, stripFrontmatter(rawBody), doc.passwordEnv)
 
 	stripSecretFields(doc)
 	if (doc.password !== undefined)
@@ -291,15 +319,36 @@ function restoreDecryptedBody(doc: EncryptableDocument, payload: EncryptedPayloa
 
 const MANIFEST_PATH = '.nuxt/encrypted-manifest.json'
 
-interface EncryptedManifest {
-	[contentPath: string]: string
+export interface EncryptedManifestEntry {
+	/** 正文首行明文特征串（密文源文件形态下没有明文可提取，缺省） */
+	marker?: string
+	/** 该文章的口令环境变量名——变量名映射进产物同样是泄漏，纳入自检 */
+	passwordEnv?: string
+}
+
+/** v1 清单的值是纯特征串字符串，读取时归一化成 v2 结构 */
+type EncryptedManifest = Record<string, string | EncryptedManifestEntry>
+
+function upsertManifestEntry(contentPath: string, patch: EncryptedManifestEntry): void {
+	let manifest: EncryptedManifest = {}
+	try {
+		manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as EncryptedManifest
+	}
+	catch {}
+	const existing = manifest[contentPath]
+	manifest[contentPath] = {
+		...(typeof existing === 'string' ? { marker: existing } : existing),
+		...patch,
+	}
+	mkdirSync('.nuxt', { recursive: true })
+	writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, '\t'), 'utf8')
 }
 
 /**
- * 加密成功后登记一条泄漏自检记录：文章最终路径 → 正文首行明文特征串。
- * scripts/check-build-leak.mjs 构建后据此扫描产物，特征串出现即说明密文被绕过泄漏。
+ * 加密成功后登记一条泄漏自检记录：文章最终路径 → 明文特征串 + 口令变量名。
+ * scripts/check-build-leak.mjs 构建后据此扫描产物，特征串/变量名出现即说明密文被绕过泄漏。
  */
-export function recordEncryptedArticle(contentPath: string, rawBody: string): void {
+export function recordEncryptedArticle(contentPath: string, rawBody: string, passwordEnv?: string): void {
 	const firstLine = stripFrontmatter(rawBody)
 		.split('\n')
 		.map(line => line.trim())
@@ -307,14 +356,14 @@ export function recordEncryptedArticle(contentPath: string, rawBody: string): vo
 		?? ''
 	const marker = firstLine.replace(/^[#>*`\-\s]+/, '').replace(/\s+/g, ' ').slice(0, 40)
 
-	let manifest: EncryptedManifest = {}
-	try {
-		manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as EncryptedManifest
-	}
-	catch {}
-	manifest[contentPath] = marker
-	mkdirSync('.nuxt', { recursive: true })
-	writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, '\t'), 'utf8')
+	upsertManifestEntry(contentPath, { marker, passwordEnv })
+}
+
+/** 密文源文件（幂等路径）也登记：没有明文特征串可提取，但口令变量名必须被自检覆盖 */
+export function recordCipherArticle(contentPath: string | undefined, passwordEnv: string | undefined): void {
+	if (!contentPath || !passwordEnv)
+		return
+	upsertManifestEntry(contentPath, { passwordEnv })
 }
 
 /** 文章本次构建未处于加密状态（已解锁/被解密）时清掉旧记录，让清单始终等于本次加密集合 */

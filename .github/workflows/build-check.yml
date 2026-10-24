@@ -1,0 +1,46 @@
+name: build-check
+
+# 每次推送/PR 都完整构建一次，并跑加密产物泄漏自检：
+# 产物里出现明文特征串、明文密码或口令变量名映射时，直接判失败挡下合并。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4（版本读 package.json 的 packageManager）
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      # 注入口令 Secret 让加密在构建中真实发生（无 passwordEnv 的文章不受影响）；
+      # 故意不设 ENCRYPT_BACKFILL——CI 里的源文件必须保持原样，绝不回写。
+      - name: 构建（pnpm generate）
+        env:
+          MOECTF_PW: ${{ secrets.MOECTF_FLAG }}
+          BLOG_DEV_PW: ${{ secrets.BLOG_DEV_PW }}
+          TOOL_PW: ${{ secrets.TOOL_PW }}
+        run: pnpm generate
+
+      - name: 加密产物泄漏自检（check:encrypted）
+        run: pnpm check:encrypted

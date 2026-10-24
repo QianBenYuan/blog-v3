@@ -9,11 +9,15 @@
  *
  * --all 模式（本地编辑用）：把所有加密文章恢复成明文，但保留 passwordEnv/unlockAt/passwordHint，
  *   改完稿重新构建（ENCRYPT_BACKFILL=1 + 环境变量）即可再加密写回，编辑闭环。
+ *   会改写所有密文源文件，交互终端下需输入 yes 确认，非交互环境必须显式加 --yes。
+ *
+ * --dry-run：只列出将要处理的文章，不写任何文件。
  *
  * 解密失败/缺密码的文章保持原样（下次运行再试，或一直走密码门）。
  *
  * 用法：
  *   MOECTF_PW=xxx node scripts/unlock-posts.mjs          # 只解锁已到期文章
+ *   MOECTF_PW=xxx node scripts/unlock-posts.mjs --dry-run # 预览将解锁哪些文章
  *   node scripts/unlock-posts.mjs --all --pw 123456      # 本地恢复所有加密文章明文（直接传密码，免配 Secret）
  *   MOECTF_PW=xxx node scripts/unlock-posts.mjs --all    # 同上，密码走环境变量
  */
@@ -30,9 +34,27 @@ const KEY_LENGTH = 32
 
 const CONTENT_DIR = join(process.cwd(), 'content')
 const RESTORE_ALL = process.argv.includes('--all')
+const DRY_RUN = process.argv.includes('--dry-run')
+const ASSUME_YES = process.argv.includes('--yes')
 const CLI_PASSWORD = process.argv.includes('--pw')
 	? process.argv[process.argv.indexOf('--pw') + 1]
 	: undefined
+
+// --all 是批量改写源文件的危险操作：交互终端输入 yes 确认；CI/脚本里必须显式 --yes，防止误触发
+if (RESTORE_ALL && !ASSUME_YES && !DRY_RUN) {
+	if (!process.stdin.isTTY) {
+		console.error('[unlock-posts] 拒绝执行：--all 会把所有加密文章改写为明文。非交互环境请显式加 --yes；先预览可加 --dry-run')
+		process.exit(1)
+	}
+	const readline = (await import('node:readline/promises')).default
+	const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+	const answer = (await rl.question('[unlock-posts] 将把所有加密文章恢复为明文（保留 passwordEnv 供重新加密），确定？输入 yes 继续：')).trim().toLowerCase()
+	rl.close()
+	if (answer !== 'yes') {
+		console.log('[unlock-posts] 已取消')
+		process.exit(0)
+	}
+}
 
 function decrypt(payload, password) {
 	const attempts = payload.iter == null
@@ -84,7 +106,9 @@ function parseEncryptedData(fm) {
 		// 离开缩进块即结束
 		if (!/^[ \t]/.test(line))
 			break
-		const kv = line.match(/^[ \t]+(salt|iv|tag|data|v|iter):(.*?)\r?$/)
+		// `.*` 无法越过 \r（. 不匹配行终止符），行尾 \r 由 \r? 吸收——CRLF 文件也能解析
+		// `.` 无法越过 \r（行终止符），行尾 \r 由 \r? 吸收——CRLF 文件也能解析
+		const kv = line.match(/^[ \t]+(salt|iv|tag|data|v|iter):(.*)\r?$/)
 		if (!kv)
 			continue
 		let value = kv[2].trim().replace(/(^|\s)#.*$/, '')
@@ -180,6 +204,12 @@ for (const file of walk(CONTENT_DIR)) {
 		continue
 	}
 
+	if (DRY_RUN) {
+		console.log(`[unlock-posts] [dry-run] 将解锁${RESTORE_ALL ? '（保留 passwordEnv）' : ''}: ${file}`)
+		changed++
+		continue
+	}
+
 	const newFm = filterFrontmatter(fm, !RESTORE_ALL)
 	const out = `---\n${newFm}\n---\n${plain.markdown.replace(/^\n+/, '\n')}`
 	writeFileSync(file, out, 'utf8')
@@ -187,7 +217,7 @@ for (const file of walk(CONTENT_DIR)) {
 	changed++
 }
 
-console.log(`[unlock-posts] done: 解锁 ${changed} 篇，跳过 ${skipped} 篇`)
+console.log(`[unlock-posts] done${DRY_RUN ? '（dry-run，未写任何文件）' : ''}: 解锁 ${changed} 篇，跳过 ${skipped} 篇`)
 
 // CI（默认）模式下，到期文章因缺密码/密码错误被跳过 = 配置问题，让 workflow 显式失败暴露它
 if (!RESTORE_ALL && skipped > 0)

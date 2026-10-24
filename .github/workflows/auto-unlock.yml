@@ -19,10 +19,13 @@ jobs:
   unlock:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # pin 到具体 commit，防止 action 被投毒后拿到 contents:write 权限；
+      # persist-credentials 关掉默认令牌落地，后续 push/pull 全部走显式 token URL
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # 定时任务触发时默认只拉一个提交，push 前需要完整历史才能判断是否落后
           fetch-depth: 0
+          persist-credentials: false
 
       - name: 解密到期文章并重写为明文
         run: |
@@ -63,6 +66,7 @@ jobs:
           fi
           git commit -m "chore: 加密文章到期自动解锁"
           # 定时任务执行期间主分支可能已被别的提交推走，先 rebase 再推，避免 non-fast-forward 失败
-          git pull --rebase --autostash origin main
+          # （persist-credentials 已关闭，fetch/push 都走显式 token URL）
+          git pull --rebase --autostash "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" main
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
           echo "已推送解锁提交"

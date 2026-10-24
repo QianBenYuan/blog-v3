@@ -76,25 +76,89 @@ const ALLOWED_EVENTS = new Set([
 // forwarded when the caller also presents the setup secret below.
 const SETUP_TOKEN = ''; // replaced from env at build time — see SETUP_TOKEN_ENV
 
-const CORS_HEADERS = {
-	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Methods': 'POST, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, X-Twikoo-Setup',
-	'Access-Control-Max-Age': '86400',
+// The comment widget only ever posts from the blog itself, so a CORS
+// wildcard is unneeded surface: reflect the Origin only when it is on the
+// allowlist below. Non-browser clients send no Origin header at all and are
+// unaffected here (they are throttled instead — CORS was never a defence
+// against them).
+// Override/extend per deployment with a wrangler var:
+//   ALLOWED_ORIGINS = "https://mirror1.example,https://mirror2.example"
+const DEFAULT_ALLOWED_ORIGINS = [
+	'https://blog.qianbenyuan.dpdns.org',
+	// Local preview (pnpm dev / pnpm preview) so the comment section still
+	// works while writing posts on a laptop.
+	'http://localhost:3000',
+	'http://localhost:4173',
+	'http://127.0.0.1:3000',
+	'http://127.0.0.1:4173',
+];
+
+function corsHeaders(request, env) {
+	const origin = request.headers.get('Origin');
+	const allowed = new Set(DEFAULT_ALLOWED_ORIGINS);
+	for (const item of (env?.ALLOWED_ORIGINS ?? '').split(',')) {
+		const trimmed = item.trim();
+		if (trimmed) allowed.add(trimmed);
+	}
+	if (!origin || !allowed.has(origin))
+		return { Vary: 'Origin' };
+	return {
+		'Access-Control-Allow-Origin': origin,
+		'Access-Control-Allow-Methods': 'POST, OPTIONS',
+		'Access-Control-Allow-Headers': 'Content-Type, X-Twikoo-Setup',
+		'Access-Control-Max-Age': '86400',
+		Vary: 'Origin',
+	};
+}
+
+// Lightweight in-memory rate limiting. Buckets live per Worker isolate and
+// reset on deploy/cold start, and separate Cloudflare colos count
+// independently — so this is abuse damping (a scripted flood starts getting
+// 429s from most requests), NOT a per-IP guarantee. Hard guarantees need
+// Cloudflare's Rate Limiting product configured on the route.
+const RATE_LIMITS = {
+	// The write paths visitors can abuse; reads are cheap and get the default.
+	COMMENT_SUBMIT: { windowMs: 60_000, max: 5 },
+	COMMENT_LIKE: { windowMs: 60_000, max: 20 },
+	default: { windowMs: 60_000, max: 60 },
 };
+const rateBuckets = new Map();
+
+function rateLimit(event, request) {
+	const { windowMs, max } = RATE_LIMITS[event] ?? RATE_LIMITS.default;
+	const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+	const now = Date.now();
+	const key = `${ip}:${event}`;
+	const hits = (rateBuckets.get(key) ?? []).filter(t => now - t < windowMs);
+	if (hits.length >= max) {
+		rateBuckets.set(key, hits);
+		return false;
+	}
+	hits.push(now);
+	rateBuckets.set(key, hits);
+	// Drop dead buckets so the Map cannot grow without bound under scanning.
+	if (rateBuckets.size > 10_000) {
+		for (const [k, v] of rateBuckets) {
+			if (v.every(t => now - t >= windowMs))
+				rateBuckets.delete(k);
+		}
+	}
+	return true;
+}
 
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
+		const cors = corsHeaders(request, env);
 
 		// Health check for uptime monitoring. Deliberately does not touch the
 		// upstream, so it distinguishes "Worker is down" from "Vercel is down".
 		if (url.pathname === '/healthz') {
-			return new Response('ok', { headers: CORS_HEADERS });
+			return new Response('ok', { headers: cors });
 		}
 
 		if (request.method === 'OPTIONS') {
-			return new Response(null, { status: 204, headers: CORS_HEADERS });
+			return new Response(null, { status: 204, headers: cors });
 		}
 
 		// The Twikoo backend is a POST-only JSON API — it serves no HTML at
@@ -109,7 +173,7 @@ export default {
 					'Upstream: ' + UPSTREAM,
 				{
 					status: 405,
-					headers: { ...CORS_HEADERS, Allow: 'POST, OPTIONS' },
+					headers: { ...cors, Allow: 'POST, OPTIONS' },
 				},
 			);
 		}
@@ -118,12 +182,16 @@ export default {
 		try {
 			payload = await request.json();
 		} catch {
-			return json({ code: 400, msg: 'invalid JSON body' }, 400);
+			return json({ code: 400, msg: 'invalid JSON body' }, 400, cors);
 		}
 
 		const event = payload?.event;
 		if (!isEventAllowed(event, request, env)) {
-			return json({ code: 403, msg: `event not allowed: ${event}` }, 403);
+			return json({ code: 403, msg: `event not allowed: ${event}` }, 403, cors);
+		}
+
+		if (!rateLimit(event, request)) {
+			return json({ code: 429, msg: 'too many requests, slow down' }, 429, cors);
 		}
 
 		// Cache-bust so a cached error page is never replayed.
@@ -139,13 +207,13 @@ export default {
 			return new Response(await upstream.text(), {
 				status: upstream.status,
 				headers: {
-					...CORS_HEADERS,
+					...cors,
 					'Content-Type': 'application/json; charset=utf-8',
 					'Cache-Control': 'no-store',
 				},
 			});
 		} catch (err) {
-			return json({ code: 502, msg: `upstream unreachable: ${err}` }, 502);
+			return json({ code: 502, msg: `upstream unreachable: ${err}` }, 502, cors);
 		}
 	},
 };
@@ -164,13 +232,13 @@ function isEventAllowed(event, request, env) {
 	return request.headers.get('X-Twikoo-Setup') === expected;
 }
 
-function json(obj, status) {
+function json(obj, status, cors = {}) {
 	return new Response(JSON.stringify(obj), {
 		status,
 		headers: {
 			'Content-Type': 'application/json; charset=utf-8',
 			'Cache-Control': 'no-store',
-			...CORS_HEADERS,
+			...cors,
 		},
 	});
 }

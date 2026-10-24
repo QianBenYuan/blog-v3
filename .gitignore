@@ -34,3 +34,9 @@ ssl/
 *.key
 *.pem
 *.crt
+
+# 加密文章离线明文备份与安全审计产物（含明文/破解工具，一步之遥就是公开泄漏，严禁入仓）
+backups/
+crack/
+restored/
+restore-tools/
