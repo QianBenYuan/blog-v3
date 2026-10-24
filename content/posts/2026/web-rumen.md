@@ -11,6 +11,7 @@ tags:
   - 网络安全
   - 信息泄露
 type: tech
+recommend: 5
 ---
 
 ## WEB入门题（文件泄露）

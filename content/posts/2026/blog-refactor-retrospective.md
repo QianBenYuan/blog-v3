@@ -14,7 +14,6 @@ tags:
   - 复盘
 type: tech
 passwordEnv: "MOECTF_PW"
-recommend: 4
 encrypted: true
 encryptedFormat: ast
 encryptedData:
