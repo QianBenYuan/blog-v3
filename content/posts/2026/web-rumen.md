@@ -1718,3 +1718,16 @@ python -m dirsearch -u 你的靶场地址/db/ -e mdb
 下载 `db.mdb` 之后， 用记事本打开它，`ctrl+F`搜索`ctf`就看到flag了
 
 ![image-20261023215047846](/assets/web-rumen/image-20261023215047846.png)
+
+若你还想看别人的web信息泄露题解，可以考虑一下她哟：
+
+::link-banner
+---
+
+banner: /assets/web-rumen/zelia-web-info-leak.png
+title: ctfshow-web-信息搜集
+description: zelia的ctfshow-web-信息搜集
+link: "https://zelia.top/2026/ctfshow-web"
+---
+
+::
