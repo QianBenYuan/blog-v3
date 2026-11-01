@@ -19,14 +19,24 @@ const selfFeed = {
 
 export default [
 	{
-		name: '影分身',
-		desc: '小圆不小心裂开了（ ’ - ’ * )',
+		name: '小圆不小心裂开了（ ’ - ’ * )',
+		desc: '影分身',
 		entries: [
 			myFeed,
+			{
+				author: '千本圆',
+				title: 'Gitee',
+				desc: '千本圆的 Gitee 主页',
+				link: 'https://gitee.com/',
+				icon: getFavicon('gitee.com'),
+				avatar: '/assets/avatar.jpg',
+				date: '2026-11-01',
+				comment: '这是我自己',
+			},
 		],
 	},
 	{
-		name: '友链',
+		name: '校友',
 		desc: '校友GUSEST',
 		entries: [
 			selfFeed,
