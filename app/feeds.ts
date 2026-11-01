@@ -93,6 +93,21 @@ export default [
 		],
 	},
 	{
+		name: '大佬们',
+		desc: '这是一群大佬',
+		entries: [
+			{
+				author: '牢仔',
+				title: '牢ICP',
+				desc: '面向个人站长的非官方网站联盟备案系统',
+				link: 'https://icp.itlaozai.top',
+				icon: getFavicon('icp.itlaozai.top'),
+				avatar: 'https://itlaozai.top/assets/icon/icon.png',
+				date: '2026-11-01',
+			},
+		],
+	},
+	{
 		name: '真诚致谢',
 		desc: '感谢这些博客一直以来的支持与帮助',
 		entries: [
