@@ -32,7 +32,7 @@ if (import.meta.dev) {
 
 <template>
 <section class="feed-group">
-	<h3 class="feed-title">
+	<h3 class="feed-title" :class="{ 'feed-title-long': name.length >= 10 }">
 		<button
 			v-if="props.shuffle"
 			role="button"
@@ -78,6 +78,11 @@ if (import.meta.dev) {
 	color: transparent;
 	transition: color 0.2s;
 	-webkit-text-stroke: 1px var(--c-text-3);
+
+	// 长标题（≥10 字符）缩小字号，防止占满整行
+	&.feed-title-long {
+		font-size: calc(5em - 8pt);
+	}
 
 	&::selection, :hover > & {
 		color: var(--c-text-3);
