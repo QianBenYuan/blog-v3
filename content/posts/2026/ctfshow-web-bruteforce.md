@@ -3,7 +3,7 @@ title: "WEB入门题（爆破）"
 description: "到爆破了喵"
 image: "/assets/我要飞了喵.jpg"
 date: 2026-10-24
-updated: 2026-11-03
+updated: 2026-11-04
 categories:
   - 学习
 tags:
@@ -1325,3 +1325,184 @@ curl -s -b "token=算出来的token值" "http://靶场地址/?r=a1"
 4. 看这个 POST 的**响应**，或者切到 **Proxy → HTTP history** 里找 `checkdb.php` 这一条，响应里就是：
 
 ![image-20261103210338738](/assets/ctfshow-web-bruteforce/image-20261103210338738.png)
+
+### web27
+
+这两个按钮可以点，点一下看看？
+
+![image-20261104195246474](/assets/ctfshow-web-bruteforce/image-20261104195246474.png)
+
+1.**录取名单** → 点击自动下载一个 `list.xlsx` 表格，里面有几位学生的**姓名**和**身份证号(缺了中间 8 位)**，缺失的是生日日期。
+
+![image-20261104195424548](/assets/ctfshow-web-bruteforce/image-20261104195424548.png)
+
+2.**学生学籍信息查询系统** → 一个查询页面，输入**姓名 + 完整身份证号**可以查到该学生的录取信息。
+
+![image-20261104195441042](/assets/ctfshow-web-bruteforce/image-20261104195441042.png)
+
+#### 解题步骤
+
+##### 观察信息
+
+- 下载
+
+	```
+	list.xlsx
+	```
+
+	取第一个学生「高先伊」为例：
+
+	- 身份证已知部分：前 6 位 `621022` + 后 4 位 `5237`
+	- 需要爆破中间 8 位(出生年月日)
+
+##### 抓包分析
+
+在查询页面输入姓名「高先伊」和随便一个身份证号(如 `621022199002015237`),点击查询，用 Burp 抓包。
+
+![image-20261104200847786](/assets/ctfshow-web-bruteforce/image-20261104200847786.png)
+
+##### Burp Intruder 爆破
+
+把请求包 **Send to Intruder(发送到入侵者模块)**：
+
+1.**Position(位置)选项卡**：把 `p=` 后面的日期部分选中，点 § 符号设为**变量**(狙击手/Sniper 模式即可)。
+
+![image-20261104201006875](/assets/ctfshow-web-bruteforce/image-20261104201006875.png)
+
+2.Payloads(载荷)选项卡
+
+：两种玩法：
+
+- **Dates 日期模式**：payload type 选 `Dates`,设置起止日期(如 1989-01-01 ~ 1991-12-31)。
+- Format 格式手动改成自定义的 `yyyyMMdd`(8 位连写，如 19900201)
+- **数值模式**：如果 BP 的日期模式有问题，可以用 `Numbers`/runtime file,从 19890101 编到某个上限，几万条也能跑。
+
+3.开始攻击(Start Attack)。
+
+##### 识别成功的那条
+
+爆破完按 **Length(长度)列排序**，响应包长度明显不同的那条就是成功响应(失败时统一返回“提交信息有误”)。
+
+![image-20261104201608646](/assets/ctfshow-web-bruteforce/image-20261104201608646.png)
+
+###### 法1：使用Unicode 转义
+
+成功响应里是一串 **Unicode 转义**：
+
+```
+\u606d\u559c\u60a8...
+```
+
+![image-20261104202504769](/assets/ctfshow-web-bruteforce/image-20261104202504769.png)
+
+用 CyberChef(Toolkit 里就有)或在线工具解码，得到：
+
+> 恭喜您，您已被我校录取，你的学号为 **02015237**,初始密码为**身份证号码**
+
+![image-20261104203118712](/assets/ctfshow-web-bruteforce/image-20261104203118712.png)
+
+即：学号 `02015237`,密码 = 完整身份证号(爆破出来的那个，如 `621022199002015237`)。
+
+###### 法2：网页直接登录得到
+
+![image-20261104203245549](/assets/ctfshow-web-bruteforce/image-20261104203245549.png)
+
+##### 登录拿 flag
+
+回到登录页，用学号 + 身份证号登录，得到 flag。
+
+![image-20261104203408114](/assets/ctfshow-web-bruteforce/image-20261104203408114.png)
+
+![image-20261104203422756](/assets/ctfshow-web-bruteforce/image-20261104203422756.png)
+
+#### 一些其他解法：
+
+##### Python 生成字典文件(经典写法)
+
+```
+id_head = 621022   # 前6位地址码
+id_reap = 5237     # 后4位
+year = 1989
+
+fp = open('id.txt', 'w')
+for i in range(year, 1991):          # 年份 1989~1990
+    for month in range(1, 13):       # 1~12月
+        for day in range(1, 32):     # 1~31日
+            # 关键:月、日不足两位要补 0(比如 2月5日 → 0205)
+            if day < 10 and month < 10:
+                id = str(id_head) + str(i) + "0" + str(month) + "0" + str(day) + str(id_reap) + "\n"
+            elif day < 10:
+                id = str(id_head) + str(i) + str(month) + "0" + str(day) + str(id_reap) + "\n"
+            elif month < 10:
+                id = str(id_head) + str(i) + "0" + str(month) + str(day) + str(id_reap) + "\n"
+            else:
+                id = str(id_head) + str(i) + str(month) + str(day) + str(id_reap) + "\n"
+            fp.write(id)
+fp.close()
+```
+
+##### PHP
+
+```
+<?php
+$myFile = fopen("zid.txt", "w") or die("Unable to open file!");
+for ($year = 1989; $year < 1991; $year++) {
+    for ($mon = 1; $mon <= 12; $mon++) {
+        for ($day = 1; $day <= 31; $day++) {
+            // %04d=年份补到4位,%02d=月/日补到2位,一行搞定补零
+            $txt = sprintf("621022%04d%02d%02d5237\n", $year, $mon, $day);
+            fwrite($myFile, $txt);
+        }
+    }
+}
+fclose($myFile);
+```
+
+##### Python 异步协程直接打(不走 Burp,速度最快)
+
+用 `aiohttp`(异步 HTTP 库，需 `pip install aiohttp`)开 **32 个协程并发**，逐天生成日期直接 POST,从 1990 扫到 2000。
+
+### web28
+
+```
+https://7985fab2-2506-44b9-9ab3-75e155583582.challenge.ctf.show/0/1/2.txt
+```
+
+`/0/1/2.txt`看到这些数字，没有什么想法吗？do it！
+
+`/0/1/`这一个前面两级是`目录`，后面的`2.txt`是文件名，所以我们要去掉`2.txt`
+
+**Q1：为什么要先去掉 `2.txt`？** 
+
+> 因为我们要爆破的是「目录」，flag 藏在某个数字目录下，直接对 `/{数字}/{数字}/` 爆破，成功的那条会 200，然后在它的响应包里找到 flag(不用猜文件名)。这也是很多师傅的做法：把 `2.txt` 换成 `index.php` 或干脆留空，只爆两层目录。
+
+![image-20261104205116038](/assets/ctfshow-web-bruteforce/image-20261104205116038.png)
+
+#### 法1：使用Burp
+
+1.抓包，把 GET 请求 Send to Intruder。
+
+2.**Position(位置)选项卡**：选中路径里的两个数字设成变量：
+
+![image-20261104210107422](/assets/ctfshow-web-bruteforce/image-20261104210107422.png)
+
+3.**Attack type 选 `Cluster bomb`(集束炸弹模式)**
+
+**why？：**因为有两个变量要**两两组合**全部尝试。
+
+Sniper(狙击手)，Battering ram(攻城锤)，Cluster bomb(集束炸弹)三种模式的区别：
+
+> - **Sniper(狙击手)**：一次只换一个变量，另一个不动 → 适合单变量。
+> - **Battering ram(攻城锤)**：多个变量用**同一组** payload 同步替换 → 所有变量值相同。
+> - **Cluster bomb(集束炸弹)**：每个变量各自一组 payload，**笛卡尔积全部组合** → 适合「两个独立参数都要猜」的场景。
+
+![image-20261104210055500](/assets/ctfshow-web-bruteforce/image-20261104210055500.png)
+
+4.**Payloads 选项卡**：
+
+- Payload set 1：`Numbers(数字)`，从 0 到 100(或 1~99)，step 1
+- Payload set 2：同样 `Numbers`，从 0 到 100，step 1
+
+5.点 Start attack，跑约 `101×101 ≈ 1万` 次请求。
+
+6.跑完后按 **Status(状态码)** 排序，找到唯一一条 **200**,打开它的 **Response(响应)**，里面就是 flag。
