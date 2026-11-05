@@ -1,9 +1,9 @@
 ---
-title: "WEB入门题（爆破）"
+title: "ctfshow-WEB入门题（爆破）"
 description: "到爆破了喵"
 image: "/assets/我要飞了喵.jpg"
 date: 2026-10-24
-updated: 2026-11-04
+updated: 2026-11-05
 categories:
   - 学习
 tags:
@@ -14,7 +14,7 @@ tags:
 type: tech
 ---
 
-## WEB入门题（爆破）
+## ctfshow-WEB入门题（爆破）
 
 ::link-banner
 ---

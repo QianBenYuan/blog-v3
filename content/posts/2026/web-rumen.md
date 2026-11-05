@@ -1,8 +1,9 @@
 ---
-title: "WEB入门题（文件泄露）"
+title: "ctfshow-WEB入门题（文件泄露）"
 description: "一些WEB入门题"
 image: "/assets/莫弈，电话，侦探.jpg"
 date: 2026-10-22
+updated: 2026-11-05
 categories:
   - 学习
 tags:
@@ -14,7 +15,7 @@ type: tech
 recommend: 5
 ---
 
-## WEB入门题（文件泄露）
+## ctfshow-WEB入门题（文件泄露）
 
 ::link-banner
 ---
