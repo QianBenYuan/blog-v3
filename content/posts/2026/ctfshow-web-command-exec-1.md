@@ -1698,10 +1698,9 @@ print(r.text)
 
 ::link-banner
 ---
-banner: /assets/不属于这个时代的愚者.jpg
-title: ctfshow-WEB入门（命令执行）第二篇
+banner: /assets/西施，冰雪.jpg
+title: 下一篇
 description: ctfshow-WEB入门（命令执行）第二篇
-
-link: "/2026/ctfshow-web-command-exec-2"
+link: "https://blog.qianbenyuan.dpdns.org/2026/ctfshow-web-command-exec-2"
 ---
 ::
