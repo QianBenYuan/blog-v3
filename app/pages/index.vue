@@ -76,6 +76,8 @@ const { data: previewCount } = useAsyncData(
 <style lang="scss" scoped>
 .post-list {
 	margin: 1rem;
+	// 底部留白：sticky 翻页条（bottom: min(2em, 5%)）不再浮在最后一篇文章上
+	padding-bottom: 4rem;
 }
 
 .float-in-leave-to {

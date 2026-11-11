@@ -1,46 +1,7 @@
-/* 进站加载动画（BootLoader.client.vue）——全局样式，选择器作用在 JS 挂载的 #qby-splash 舞台与 <html> 状态类上 */
+/* 进站加载动画（BootLoader.client.vue）——全局样式，选择器只作用在 JS 挂载的 #qby-splash 舞台上；
+ * 首帧占位由 head 内联脚本的 #qby-boot-pre（inline style）负责，不再给 <html> 加状态类、不藏 body */
 
-/* ===== 播放期间隐藏正文，杜绝闪烁（head 内联脚本负责加类） ===== */
-html.splash-running {
-	overflow: hidden;
-}
-
-html.splash-running body {
-	opacity: 0;
-	pointer-events: none;
-}
-
-html.splash-fade body {
-	opacity: 1;
-	transition: opacity 0.55s ease;
-}
-
-/* 铺底色（视频加载前的兜底） */
-html.splash-running::before {
-	content: "";
-	position: fixed;
-	inset: 0;
-	background:
-		radial-gradient(1200px 600px at 50% -10%, rgb(56 189 248 / 8%), transparent 60%),
-		linear-gradient(180deg, #07090F 0%, #0A0E17 60%, #07090F 100%);
-	transition: opacity 0.55s ease;
-	z-index: 999998;
-}
-
-/* 扫描线质感 */
-html.splash-running #qby-splash::before {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background: repeating-linear-gradient(0deg, rgb(255 255 255 / 2.5%) 0 1px, transparent 1px 4px);
-	pointer-events: none;
-}
-
-html.splash-fade::before,
-html.splash-fade #qby-splash {
-	opacity: 0;
-}
-
+/* 舞台自带铺底色（视频加载前的兜底；旧版是挂在 html::before 上，切到舞台自身避免动 <html>） */
 #qby-splash {
 	display: flex;
 	flex-direction: column;
@@ -51,11 +12,28 @@ html.splash-fade #qby-splash {
 	overflow: hidden;
 	opacity: 1;
 	inset: 0;
+	background:
+		radial-gradient(1200px 600px at 50% -10%, rgb(56 189 248 / 8%), transparent 60%),
+		linear-gradient(180deg, #07090F 0%, #0A0E17 60%, #07090F 100%);
 	font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
 	color: #E6F1FF;
 	transition: opacity 0.55s ease;
 	cursor: pointer;
 	z-index: 999999;
+}
+
+/* 收尾淡出：组件的 finish() 只加这一个类，随后移除舞台 */
+#qby-splash.vs-fade {
+	opacity: 0;
+}
+
+/* 扫描线质感（原挂在 html.splash-running 之下，现直接作用舞台） */
+#qby-splash::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(0deg, rgb(255 255 255 / 2.5%) 0 1px, transparent 1px 4px);
+	pointer-events: none;
 }
 
 /* ===== 背景：静态图兜底 + 视频就绪后淡入 + 暗幕 ===== */

@@ -47,8 +47,9 @@ export default defineNuxtConfig({
 			script: [
 				{
 					// 进站加载动画（BootLoader.client.vue）：首帧前决定是否播放，防止正文闪烁；
-					// ?replay=1 强制重播；8 秒兜底，组件 JS 挂掉也能看到正文
-					innerHTML: `(function(){try{if(location.search.indexOf('replay')>-1)sessionStorage.removeItem('qby-splash-complete');if(sessionStorage.getItem('qby-splash-complete')!=='true'){document.documentElement.classList.add('splash-running');setTimeout(function(){var d=document.documentElement;d.classList.add('splash-fade');setTimeout(function(){d.classList.remove('splash-running','splash-fade')},650)},8e3)}}catch(e){}})();`,
+					// ?replay=1 强制重播；独立 #qby-boot-pre 遮罩占位（不改 <html> class、不藏 body，避免
+					// hydration 问题与浏览器卡死），1.5 秒兜底：组件 JS 挂掉/未接管时正文必定可见
+					innerHTML: `(function(){try{if(location.search.indexOf('replay')>-1)sessionStorage.removeItem('qby-splash-complete');if(sessionStorage.getItem('qby-splash-complete')==='true')return;sessionStorage.setItem('qby-splash-armed','1');var m=document.createElement('div');m.id='qby-boot-pre';m.style.cssText='position:fixed;inset:0;z-index:999998;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,rgba(56,189,248,.08),transparent 60%),linear-gradient(180deg,#07090F 0%,#0A0E17 60%,#07090F 100%);color:#8FA3BF;font-family:JetBrains Mono,Consolas,monospace;font-size:13px;letter-spacing:.2em';m.textContent='LOADING';document.documentElement.appendChild(m);setTimeout(function(){if(m.parentNode)m.parentNode.removeChild(m)},1500)}catch(e){}})();`,
 				},
 				...blogConfig.scripts,
 			],
@@ -138,6 +139,10 @@ export default defineNuxtConfig({
 	},
 
 	vite: {
+		// 老浏览器白屏修复：构建产物降级到不含 ??=/?. 等新语法（旧版 es2022 目标需 Chrome 85+）
+		build: {
+			target: ['chrome80', 'safari13'],
+		},
 		css: {
 			preprocessorOptions: {
 				scss: {

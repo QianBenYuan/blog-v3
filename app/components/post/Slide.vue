@@ -102,9 +102,12 @@ useEventListener(carouselEl, 'wheel', (e) => {
 	align-items: center;
 	justify-content: space-between;
 	gap: 2rem;
-	height: 3rem;
+	// 不再用 3rem（= 字号）卡死高度：标题 3rem/line-height 1 会顶满行盒，
+	// mask 渐变正好切在字形上；改为底部留 1rem 纯淡出区，渐变更不碰字形
+	height: auto;
+	padding: 0.2rem 0 1rem;
 	margin-bottom: -0.2rem;
-	mask-image: linear-gradient(#FFF, transparent);
+	mask-image: linear-gradient(#FFF calc(100% - 1rem), transparent);
 	color: var(--c-text-3);
 
 	>.title {

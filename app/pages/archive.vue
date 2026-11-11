@@ -128,7 +128,7 @@ function getArticleYear(article: ArticleProps) {
 
 <style lang="scss" scoped>
 .archive {
-	padding: 1rem; // 防止内部 outline 被 mask
+	padding: 1rem 1rem 4rem; // 底部 4rem 留白：sticky 调参条（bottom: min(2em, 5%)）不再浮在最后一组上
 	mask-image: linear-gradient(#FFF 50%, #FFF7);
 }
 
