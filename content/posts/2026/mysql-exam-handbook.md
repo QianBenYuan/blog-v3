@@ -1,6 +1,6 @@
 ---
-title: "MySQL数据库入门考点背诵手册"
-description: "黑马程序员《MySQL数据库入门（第2版）》按教材 10 章整理的考点与必背手册：必背清单、默写模板、易错点与自测（答案折叠），并附网安视角提示。"
+title: "MySQL"
+description: "MySQL背诵"
 image: "/assets/可爱的艾因.jpg"
 date: 2026-11-18
 categories:
