@@ -25,7 +25,8 @@
     "new": "unrun scripts/new-blog.ts",
     "check:feed": "unrun scripts/framework/get-feed.ts",
     "check:feed/all": "unrun scripts/framework/check-all-feeds.ts",
-    "check:encrypted": "node scripts/check-build-leak.mjs"
+    "check:encrypted": "node scripts/check-build-leak.mjs",
+    "check:source": "node scripts/check-encryption-source.mjs"
   },
   "dependencies": {
     "@bikariya/image-viewer": "catalog:ui",

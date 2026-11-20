@@ -1,10 +1,10 @@
 name: build-check
 
-# 每次推送/PR 都完整构建一次，并跑加密产物泄漏自检：
-# 产物里出现明文特征串、明文密码或口令变量名映射时，直接判失败挡下合并。
+# 只在 PR 和手动触发时做完整构建 + 产物级泄漏自检（check:encrypted）。
+# main 的 push 交给 Vercel 构建兜底，这里不再重复一遍全量 generate（每次白烧 3~5 分钟 runner）。
+# 代价：main 推送不再有「产物级」检查，所以 push 时的加密源文件形态由
+# secret-scan 的 encryption-source 作业（scripts/check-encryption-source.mjs）兜住。
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
