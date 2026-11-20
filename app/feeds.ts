@@ -105,6 +105,15 @@ export default [
 				avatar: 'https://itlaozai.top/assets/icon/icon.png',
 				date: '2026-11-01',
 			},
+			{
+				author: '三段荒',
+				title: '三段荒的窝',
+				desc: '技术博客、独立小游戏与自制工具的个人站点',
+				link: 'https://sanduanhuang.dpdns.org/blog',
+				icon: getFavicon('sanduanhuang.dpdns.org'),
+				avatar: 'https://sanduanhuang.dpdns.org/favicon.ico',
+				date: '2026-11-20',
+			},
 		],
 	},
 	{
