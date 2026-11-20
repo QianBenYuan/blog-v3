@@ -1,6 +1,6 @@
 ---
 title: "小圆的工具"
-description: "小圆的 CTF 工具箱完全索引：工具清单与用途速查，涵盖抓包、Web 渗透、字典库、逆向与取证，附环境速览、目录地图、备份清单与 2026-11 AI 学习工具链（ZCode 技能、MySQL 教学库 WSL/原生双套、MCP、学习命令）。"
+description: "小圆的工具指南，是密码噢"
 image: /assets/私奔了.jpg
 date: 2026-10-07
 updated: 2026-11-20
