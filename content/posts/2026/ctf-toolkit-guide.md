@@ -1,6 +1,6 @@
 ---
 title: "小圆的工具"
-description: "小圆的工具指南，是密码噢"
+description: "小圆的工具指南，是秘密噢"
 image: /assets/私奔了.jpg
 date: 2026-10-07
 updated: 2026-11-20
