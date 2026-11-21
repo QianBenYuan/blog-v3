@@ -27,7 +27,7 @@ export default [
 				author: '千本圆',
 				title: 'Gitee',
 				desc: '千本圆的 Gitee 主页',
-				link: 'https://gitee.com/',
+				link: 'https://gitee.com/thousand-origins/',
 				icon: getFavicon('gitee.com'),
 				avatar: '/assets/avatar.jpg',
 				date: '2026-11-01',
