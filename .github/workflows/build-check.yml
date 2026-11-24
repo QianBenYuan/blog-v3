@@ -40,6 +40,7 @@ jobs:
           MOECTF_PW: ${{ secrets.MOECTF_FLAG }}
           BLOG_DEV_PW: ${{ secrets.BLOG_DEV_PW }}
           TOOL_PW: ${{ secrets.TOOL_PW }}
+          DIARY: ${{ secrets.DIARY }}
         run: pnpm generate
 
       - name: 加密产物泄漏自检（check:encrypted）

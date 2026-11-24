@@ -298,7 +298,7 @@ export function applyContentEncryption(rawDoc: unknown, rawBody = ''): boolean {
 
 	// 口令字段剥离前先提取自检信息（明文特征串 + 口令变量名）
 	if (doc.path)
-		recordEncryptedArticle(doc.path, stripFrontmatter(rawBody), doc.passwordEnv)
+		recordEncryptedArticle(doc.path, stripFrontmatter(rawBody), doc.passwordEnv, doc.title)
 
 	stripSecretFields(doc)
 	if (doc.password !== undefined)
@@ -348,13 +348,30 @@ function upsertManifestEntry(contentPath: string, patch: EncryptedManifestEntry)
  * 加密成功后登记一条泄漏自检记录：文章最终路径 → 明文特征串 + 口令变量名。
  * scripts/check-build-leak.mjs 构建后据此扫描产物，特征串/变量名出现即说明密文被绕过泄漏。
  */
-export function recordEncryptedArticle(contentPath: string, rawBody: string, passwordEnv?: string): void {
-	const firstLine = stripFrontmatter(rawBody)
+export function recordEncryptedArticle(contentPath: string, rawBody: string, passwordEnv?: string, title?: string): void {
+	// 正文首行常是 `## 标题`，与公开的 frontmatter title 重复；标题会出现在文章列表
+	// payload 里，拿它当特征串会误报「正文泄漏」。这里跳过标题行/组件围栏/表格/代码围栏，
+	// 取第一条真正的正文当特征串。
+	const normalize = (line: string) => line.replace(/^[#>*`\-\s]+/, '').replace(/\s+/g, ' ').trim()
+	const titleNorm = title ? normalize(title) : ''
+	const marker = stripFrontmatter(rawBody)
 		.split('\n')
 		.map(line => line.trim())
-		.find(line => line && !line.startsWith('<!--'))
-		?? ''
-	const marker = firstLine.replace(/^[#>*`\-\s]+/, '').replace(/\s+/g, ' ').slice(0, 40)
+		.find((line) => {
+			if (!line || line.startsWith('<!--'))
+				return false
+			const norm = normalize(line)
+			if (!norm)
+				return false
+			if (titleNorm && norm === titleNorm)
+				return false
+			if (/^(?:::|\||```|~~~)/.test(norm))
+				return false
+			return true
+		})
+		?.replace(/^[#>*`\-\s]+/, '')
+		.replace(/\s+/g, ' ')
+		.slice(0, 40) ?? ''
 
 	upsertManifestEntry(contentPath, { marker, passwordEnv })
 }

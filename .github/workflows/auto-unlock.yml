@@ -44,9 +44,11 @@ jobs:
           #   passwordEnv: "MOECTF_PW"   → Secret MOECTF_FLAG
           #   passwordEnv: "BLOG_DEV_PW" → Secret BLOG_DEV_PW
           #   passwordEnv: "TOOL_PW"     → Secret TOOL_PW
+          #   passwordEnv: "DIARY"       → Secret DIARY
           MOECTF_PW: ${{ secrets.MOECTF_FLAG }}
           BLOG_DEV_PW: ${{ secrets.BLOG_DEV_PW }}
           TOOL_PW: ${{ secrets.TOOL_PW }}
+          DIARY: ${{ secrets.DIARY }}
 
       - name: 有改动则提交推送（触发 Cloudflare Workers 重新构建）
         env:
