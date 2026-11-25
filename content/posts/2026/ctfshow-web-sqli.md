@@ -1,7 +1,7 @@
 ---
 title: "ctfshow-WEB入门（sql注入）"
 description: "ctfshow-WEB入门（sql注入）"
-image: "/assets/西施.jpg"
+image: "/assets/光下的西施.jpg"
 date: 2026-11-05
 categories:
   - 学习
